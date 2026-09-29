@@ -1,22 +1,8 @@
-<!doctype html>
-<html lang="it">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Valigia Implantare</title>
-<meta name="description" content="Impianti dentali in valigia per marca e misura, prenotazioni per paziente e registro.">
-<meta name="theme-color" content="#10233f">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Valigia">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
-<script src="config.js?v=2"></script>
 <style>
 /* Layout: testata blu notte a tutta larghezza con i numeri chiave e le due azioni; sotto, schede per linea con righe misura. Barra a tre schede fissa in basso. */
 :root {
@@ -240,71 +226,13 @@ textarea.inp { min-height: 64px; resize: vertical; }
 .lrow b, .lrow .imp { grid-column: 1; }
 .lrow .btn { grid-row: 1 / span 3; grid-column: 2; }
 nav.tabs button { font-size: 11px; }
-
-/* base della web app (sostituisce lo scheletro di claude.ai) */
-html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; min-height: 100dvh; }
-[hidden] { display: none !important; }
-img { max-width: 100%; }
-body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--hero); z-index: 30; }
-.hero { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
-.auth { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: calc(24px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--hero); color: var(--hero-ink); }
-.auth-card { width: min(420px, 100%); display: flex; flex-direction: column; gap: 14px; }
-.auth-card img { width: 84px; height: 84px; border-radius: 20px; }
-.auth-card h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.02em; text-wrap: balance; }
-.auth-card p { margin: 0; color: var(--hero-muted); }
-.auth-card p b { color: var(--hero-ink); }
-.auth-card .inp { background: var(--hero-2); border-color: transparent; color: var(--hero-ink); }
-.auth-card .inp::placeholder { color: var(--hero-muted); }
-.auth-card label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--hero-muted); }
-.auth-card .err { color: #ff9d94; }
-.auth-card .hint { color: var(--hero-muted); }
-.linkbtn { background: none; border: 0; color: #6fe0b4; font-weight: 700; padding: 6px 0; text-align: left; }
 </style>
-</head>
-<body>
-<section class="auth" id="setupView" hidden>
-  <div class="auth-card">
-    <img src="icons/icon-192.png" alt="">
-    <h1>Configurazione mancante</h1>
-    <p>Inserisci l'indirizzo del progetto Supabase e la chiave pubblica nel file <b>config.js</b>.</p>
-  </div>
-</section>
-
-<section class="auth" id="authView" hidden>
-  <div class="auth-card">
-    <img src="icons/icon-192.png" alt="">
-    <h1>Valigia Implantare</h1>
-    <p id="authIntro">Entra con la tua email e la tua password.</p>
-    <form id="fAuth" class="grp" novalidate style="gap:12px">
-      <div class="grp"><label for="uEmail">Email</label><input class="inp" id="uEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
-      <div class="grp"><label for="uPass">Password</label><input class="inp" id="uPass" type="password" autocomplete="current-password"></div>
-      <p class="err" id="authErr" hidden></p>
-      <button class="btn primary block" type="submit" id="authSubmit">Entra</button>
-    </form>
-    <button class="linkbtn" type="button" id="authSwitch">Primo accesso? Crea la tua password</button>
-    <p class="hint">Password dimenticata? Chiedi a chi gestisce l'app di azzerare il tuo account.</p>
-  </div>
-</section>
-
-<section class="auth" id="deniedView" hidden>
-  <div class="auth-card">
-    <img src="icons/icon-192.png" alt="">
-    <h1>Accesso non ancora abilitato</h1>
-    <p>L'email <b id="deniedEmail"></b> non è nell'elenco degli accessi. Chiedi a chi gestisce l'app di aggiungerla da Elenchi → Accessi, poi tocca Riprova.</p>
-    <button class="btn primary block" type="button" id="deniedRetry">Riprova</button>
-    <button class="linkbtn" type="button" id="deniedOut">Esci e usa un'altra email</button>
-  </div>
-</section>
-
-<div id="appView" hidden>
-
 
 <header class="hero">
   <div class="hero-in">
     <div class="hero-top">
       <div><h1>Valigia Implantare</h1><div class="sub">Bologna · Faenza · Rimini</div></div>
-      <button class="ghost" id="homeHelp" type="button">Menu</button>
+      <button class="ghost" id="homeHelp" type="button">Aggiungi a Home</button>
     </div>
     <div class="kpis" id="kpis"></div>
     <div class="hero-actions" id="heroActions">
@@ -315,7 +243,7 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
 </header>
 
 <div class="wrap">
-  <div class="banner" id="offline" hidden>Connessione assente: i dati mostrati potrebbero non essere aggiornati. Le modifiche non vengono salvate finché non torna la rete.</div>
+  <div class="banner" id="offline" hidden>Archivio non raggiungibile. Apri la pagina da claude.ai con il tuo account per vedere e aggiornare il magazzino.</div>
   <div class="banner" id="readonly" hidden>Puoi consultare ma non modificare. Chiedi al titolare l'accesso in modifica.</div>
 
   <section id="viewMag" style="display:flex;flex-direction:column;gap:14px">
@@ -336,7 +264,6 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
   <section id="viewList" hidden style="display:flex;flex-direction:column;gap:14px">
     <div class="listcard" id="listLinee"></div>
     <div class="listcard" id="listDottori"></div>
-    <div class="listcard" id="listAccessi"></div>
   </section>
 </div>
 
@@ -346,8 +273,6 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
   <button type="button" data-tab="log" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M9 12l2 2 4-4"/></svg>Registro</button>
   <button type="button" data-tab="list" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>Elenchi</button>
 </nav>
-
-</div>
 
 <!-- Prenota paziente -->
 <dialog id="dlgRes">
@@ -412,23 +337,20 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
   </div>
 </dialog>
 
-<!-- Account e schermata Home -->
+<!-- Aiuto schermata Home -->
 <dialog id="dlgHome">
   <div class="sheet">
     <div class="sheet-head">
-      <div><div class="kicker">Account</div><h2 id="meEmail" style="overflow-wrap:anywhere"></h2></div>
+      <div><div class="kicker">iPhone</div><h2>Metti l'app nella schermata Home</h2></div>
       <button class="close" type="button" data-close aria-label="Chiudi">✕</button>
     </div>
-    <div class="grp"><span class="glabel">Metti l'app nella schermata Home (iPhone)</span>
-      <ol class="steps">
-        <li>Apri questo indirizzo in <b>Safari</b>.</li>
-        <li>Tocca <b>Condividi</b> (il quadrato con la freccia verso l'alto).</li>
-        <li>Scegli <b>Aggiungi alla schermata Home</b> e tocca <b>Aggiungi</b>.</li>
-        <li>Apri l'app dall'icona ed entra con email e password: resti collegato.</li>
-      </ol>
-    </div>
-    <p class="hint">Le modifiche si vedono subito su tutti i telefoni.</p>
-    <button class="btn danger block" type="button" id="logout">Esci</button>
+    <ol class="steps">
+      <li>Apri questa pagina in <b>Safari</b> ed effettua l'accesso a claude.ai.</li>
+      <li>Tocca <b>Condividi</b> (il quadrato con la freccia verso l'alto).</li>
+      <li>Scegli <b>Aggiungi alla schermata Home</b>.</li>
+      <li>Chiamala “Valigia” e tocca <b>Aggiungi</b>.</li>
+    </ol>
+    <p class="hint">Le modifiche si vedono subito su tutti i telefoni che hanno la pagina aperta.</p>
   </div>
 </dialog>
 
@@ -440,8 +362,8 @@ const sedeName = id => (SEDI.find(s => s.id === id) || {}).name || id || "—";
 const $ = id => document.getElementById(id);
 
 let db = null, canWrite = true;
-const S = { linee: new Map(), dottori: new Map(), stock: new Map(), prenotazioni: new Map(), registro: new Map(), accessi: new Map() };
-const loaded = { linee: false, dottori: false, stock: false, prenotazioni: false, registro: false, accessi: false };
+const S = { linee: new Map(), dottori: new Map(), stock: new Map(), prenotazioni: new Map(), registro: new Map() };
+const loaded = { linee: false, dottori: false, stock: false, prenotazioni: false, registro: false };
 const ui = { tab: "mag", line: "ALL", sede: "ALL", logQ: "", renaming: null, deleting: null };
 let openStock = null;
 const form = { editId: null, cart: new Map() }; // cart: stockId -> quantità
@@ -462,7 +384,7 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // una prenotazione contiene un elenco di impianti (items); le prenotazioni vecchie ne avevano uno solo
 const itemsOf = r => Array.isArray(r.items) ? r.items : (r.stockId ? [{ stockId: r.stockId, lineId: r.lineId, linea: r.linea, d: r.d, l: r.l }] : []);
-const cleanRes = (r, items) => ({ nome: r.nome, cognome: r.cognome, data: r.data || "", sede: r.sede, dottoreId: r.dottoreId || "", dottore: r.dottore || "", note: r.note || "", createdAt: r.createdAt || new Date().toISOString(), createdBy: r.createdBy || userEmail, items });
+const cleanRes = (r, items) => ({ nome: r.nome, cognome: r.cognome, data: r.data || "", sede: r.sede, dottoreId: r.dottoreId || "", dottore: r.dottore || "", note: r.note || "", createdAt: r.createdAt || new Date().toISOString(), items });
 
 function reservedFor(stockId, exceptResId) { let n = 0; for (const [id, r] of S.prenotazioni) if (id !== exceptResId) for (const it of itemsOf(r)) if (it.stockId === stockId) n++; return n; }
 function availFor(stockId, exceptResId) { const s = S.stock.get(stockId); return Math.max(0, (s ? s.qty || 0 : 0) - reservedFor(stockId, exceptResId)); }
@@ -473,10 +395,9 @@ function read(k) { try { return localStorage.getItem("imp2." + k); } catch (e) {
 function save(k, v) { try { localStorage.setItem("imp2." + k, v); } catch (e) {} }
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
 function dbErr(e) {
-  const m = String((e && (e.message || e.details)) || "");
-  if (e && (e.code === "42501" || /row-level security|permission denied/i.test(m))) return "Non hai i permessi per questa modifica.";
-  if (/fetch|network|load failed|offline/i.test(m)) { $("offline").hidden = false; return "Connessione assente: la modifica non è stata salvata. Riprova."; }
-  return "Salvataggio non riuscito. " + m;
+  if (e && e.code === "invalid_argument") { canWrite = false; $("readonly").hidden = false; render(); return "Non hai i permessi per modificare."; }
+  if (e && e.code === "quota_exceeded") return "Archivio pieno: elimina voci non più usate.";
+  return "Salvataggio non riuscito. Controlla la connessione e riprova.";
 }
 function armed(btn) {
   if (btn.dataset.armed) return true;
@@ -491,7 +412,7 @@ async function createItem(kind, name) {
   if (ex) return ex[0];
   const id = newId(kind === "linee" ? "l" : "d"), data = { name, createdAt: new Date().toISOString() };
   S[kind].set(id, data);
-  try { await DB.set(kind, id, data); toast(`“${name}” aggiunto`); return id; }
+  try { await db.collection(kind).doc(id).set(data); toast(`“${name}” aggiunto`); return id; }
   catch (e) { S[kind].delete(id); toast(dbErr(e)); render(); return null; }
 }
 
@@ -684,7 +605,7 @@ function renderLog() {
     html += `<div class="lrow"><b>${esc(e.cognome)} ${esc(e.nome)}</b>
       ${canWrite && db ? `<button class="btn sm" type="button" data-undo="${esc(id)}" data-confirm="Rimetti in valigia">Annulla</button>` : ""}
       <div class="imp">${itemLabel(e)}</div>
-      <div class="sub">${fmtDate(e.data, true)} · ${sedeName(e.sede)} · ${esc(e.dottore || "—")}${e.createdBy ? ` · segnato da ${esc(e.createdBy.split("@")[0])}` : ""}</div></div>`;
+      <div class="sub">${fmtDate(e.data, true)} · ${sedeName(e.sede)} · ${esc(e.dottore || "—")}</div></div>`;
   }
   if (open) html += `</div>`;
   box.innerHTML = html;
@@ -722,34 +643,13 @@ function renderLists() {
     return h;
   };
   const keep = document.activeElement && document.activeElement.closest("#viewList") ? document.activeElement.id : null;
-  const drafts = { linee: $("new-linee")?.value || "", dottori: $("new-dottori")?.value || "", accessi: $("new-accessi")?.value || "", ren: $("ren-input")?.value };
+  const drafts = { linee: $("new-linee")?.value || "", dottori: $("new-dottori")?.value || "", ren: $("ren-input")?.value };
   $("listLinee").innerHTML = block("linee", "Marche", "Le categorie in cui sono divisi gli impianti in valigia.", "Nuova marca, es. Nobel Active");
   $("listDottori").innerHTML = block("dottori", "Dottori", "Chi esegue l'intervento. Compaiono nella prenotazione.", "Nuovo dottore, es. Dott. Rossi");
   if ($("new-linee")) $("new-linee").value = drafts.linee;
-  $("listAccessi").innerHTML = accessiBlock();
   if ($("new-dottori")) $("new-dottori").value = drafts.dottori;
-  if ($("new-accessi")) $("new-accessi").value = drafts.accessi;
   if ($("ren-input") && drafts.ren !== undefined) $("ren-input").value = drafts.ren;
   if (keep && $(keep)) $(keep).focus();
-}
-
-function accessiBlock() {
-  const items = [...S.accessi.keys()].sort(byName);
-  let h = `<h2>Accessi</h2><p>Le email che possono entrare nell'app. Al primo accesso ognuno crea la sua password con “Primo accesso”.</p>`;
-  for (const em of items) {
-    const self = em.toLowerCase() === userEmail.toLowerCase();
-    h += `<div class="litem"><div class="nm">${esc(em)}${self ? "<small>sei tu</small>" : ""}</div>${self ? "" : `<div class="acts"><button class="btn sm danger" type="button" data-delacc="${esc(em)}" data-confirm="Togli accesso?">Togli</button></div>`}</div>`;
-  }
-  h += `<form class="addline" data-addform="accessi"><input class="inp" id="new-accessi" type="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="Email del dottore" autocomplete="off"><button class="btn primary" type="submit">Aggiungi</button></form>`;
-  return h;
-}
-async function addAccess(email) {
-  email = email.trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast("Scrivi un indirizzo email valido."); return; }
-  try { await DB.set("accessi", email, { aggiuntoIl: new Date().toISOString() }); toast(`${email} ora può entrare`); } catch (e) { toast(dbErr(e)); }
-}
-async function removeAccess(email) {
-  try { await DB.del("accessi", email); toast(`${email} non può più entrare`); } catch (e) { toast(dbErr(e)); }
 }
 
 function renderDetail() {
@@ -775,11 +675,12 @@ async function step(delta) {
   const qty = (s.qty || 0) + delta, r = reservedFor(openStock), err = $("szErr"); err.hidden = true;
   if (qty < 0) return;
   if (qty < r) { err.textContent = `Ci sono ${r} prenotati di questa misura: chiudi o annulla le prenotazioni prima di scendere sotto ${r}.`; err.hidden = false; return; }
-  try { await DB.update("stock", openStock, { qty, updatedAt: new Date().toISOString() }); }
+  try { await db.collection("stock").doc(openStock).update({ qty, updatedAt: new Date().toISOString() }); }
   catch (e) { err.textContent = dbErr(e); err.hidden = false; }
 }
 async function writeItems(resId, r, items) {
-  if (items.length) await DB.set("prenotazioni", resId, cleanRes(r, items)); else await DB.del("prenotazioni", resId);
+  const ref = db.collection("prenotazioni").doc(resId);
+  if (items.length) await ref.set(cleanRes(r, items)); else await ref.delete();
 }
 // segna come impiantati gli impianti in posizione idxs: scala la valigia, scrive il registro, aggiorna la prenotazione
 async function implantItems(resId, idxs) {
@@ -788,11 +689,11 @@ async function implantItems(resId, idxs) {
   for (const i of idxs) {
     const it = items[i]; if (!it) continue;
     const cur = qtys.has(it.stockId) ? qtys.get(it.stockId) : S.stock.get(it.stockId)?.qty;
-    if (cur !== undefined) { const q = Math.max(0, (cur || 0) - 1); qtys.set(it.stockId, q); await DB.update("stock", it.stockId, { qty: q, updatedAt: now }); }
-    await DB.set("registro", newId("r"), {
+    if (cur !== undefined) { const q = Math.max(0, (cur || 0) - 1); qtys.set(it.stockId, q); await db.collection("stock").doc(it.stockId).update({ qty: q, updatedAt: now }); }
+    await db.collection("registro").doc(newId("r")).set({
       nome: r.nome, cognome: r.cognome, sede: r.sede, dottore: docName(r.dottoreId, r.dottore), dottoreId: r.dottoreId || "",
       lineId: it.lineId, linea: lineName(it.lineId, it.linea), d: it.d, l: it.l, stockId: it.stockId,
-      data: r.data && r.data <= todayISO() ? r.data : todayISO(), dataPrevista: r.data || "", note: r.note || "", createdAt: now, createdBy: userEmail
+      data: r.data && r.data <= todayISO() ? r.data : todayISO(), dataPrevista: r.data || "", note: r.note || "", createdAt: now
     });
   }
   await writeItems(resId, r, items.filter((_, i) => !idxs.includes(i)));
@@ -813,16 +714,16 @@ async function removeItem(resId, idx) {
 }
 async function cancelRes(id) {
   const r = S.prenotazioni.get(id);
-  try { await DB.del("prenotazioni", id); toast(`Prenotazione di ${r ? r.cognome : "paziente"} annullata`); }
+  try { await db.collection("prenotazioni").doc(id).delete(); toast(`Prenotazione di ${r ? r.cognome : "paziente"} annullata`); }
   catch (e) { toast(dbErr(e)); }
 }
 async function undoLog(id) {
   const e = S.registro.get(id); if (!e) return;
   try {
     const s = S.stock.get(e.stockId);
-    if (s) await DB.update("stock", e.stockId, { qty: (s.qty || 0) + 1, updatedAt: new Date().toISOString() });
-    else if (S.linee.has(e.lineId)) await DB.set("stock", e.stockId || stockKey(e.lineId, e.d, e.l), { lineId: e.lineId, d: e.d, l: e.l, qty: 1, updatedAt: new Date().toISOString() });
-    await DB.del("registro", id);
+    if (s) await db.collection("stock").doc(e.stockId).update({ qty: (s.qty || 0) + 1, updatedAt: new Date().toISOString() });
+    else if (S.linee.has(e.lineId)) await db.collection("stock").doc(e.stockId || stockKey(e.lineId, e.d, e.l)).set({ lineId: e.lineId, d: e.d, l: e.l, qty: 1, updatedAt: new Date().toISOString() });
+    await db.collection("registro").doc(id).delete();
     toast(S.linee.has(e.lineId) ? "Tolto dal registro e rimesso in valigia" : "Tolto dal registro");
   } catch (ex) { toast(dbErr(ex)); }
 }
@@ -830,20 +731,20 @@ async function deleteAll(kind, id) {
   const name = S[kind].get(id)?.name || "";
   try {
     if (kind === "linee") {
-      for (const [sid] of sizesOf(id)) await DB.del("stock", sid);
+      for (const [sid] of sizesOf(id)) await db.collection("stock").doc(sid).delete();
       for (const [rid, r] of [...S.prenotazioni]) {
         const items = itemsOf(r); const keep = items.filter(it => it.lineId !== id);
         if (keep.length !== items.length) await writeItems(rid, r, keep);
       }
     }
-    await DB.del(kind, id);
+    await db.collection(kind).doc(id).delete();
     ui.deleting = null; if (ui.line === id) ui.line = "ALL";
     toast(`“${name}” eliminato`); render();
   } catch (e) { toast(dbErr(e)); }
 }
 async function renameItem(kind, id, name) {
   name = name.trim(); if (!name) return;
-  try { await DB.update(kind, id, { name }); ui.renaming = null; renderLists(); } catch (e) { toast(dbErr(e)); }
+  try { await db.collection(kind).doc(id).update({ name }); ui.renaming = null; renderLists(); } catch (e) { toast(dbErr(e)); }
 }
 
 function setNoDate(on) {
@@ -893,7 +794,7 @@ document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e =
 $("dlgSize").addEventListener("close", () => { openStock = null; });
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-open],[data-step],[data-used],[data-allused],[data-rmitem],[data-cancel],[data-edit],[data-undo],[data-cart],[data-line],[data-sede],[data-ren],[data-ren-save],[data-ren-cancel],[data-del],[data-del-go],[data-del-cancel],[data-delacc]");
+  const t = e.target.closest("[data-open],[data-step],[data-used],[data-allused],[data-rmitem],[data-cancel],[data-edit],[data-undo],[data-cart],[data-line],[data-sede],[data-ren],[data-ren-save],[data-ren-cancel],[data-del],[data-del-go],[data-del-cancel]");
   if (!t || t.disabled) return;
   const d = t.dataset;
   if (d.open) { openStock = d.open; $("szErr").hidden = true; $("dlgSize").showModal(); renderDetail(); return; }
@@ -913,7 +814,6 @@ document.addEventListener("click", e => {
   if (d.del) { ui.deleting = d.del; ui.renaming = null; renderLists(); return; }
   if (d.delGo) { const [k, id] = d.delGo.split(":"); t.disabled = true; deleteAll(k, id); return; }
   if (d.delCancel !== undefined) { ui.deleting = null; renderLists(); return; }
-  if (d.delacc) { if (armed(t)) removeAccess(d.delacc); return; }
 });
 $("viewList").addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target.matches("[data-ren-input]")) { e.preventDefault(); const [k, id] = e.target.dataset.renInput.split(":"); renameItem(k, id, e.target.value); }
@@ -922,14 +822,13 @@ $("viewList").addEventListener("submit", async e => {
   e.preventDefault();
   const kind = e.target.dataset.addform, inp = e.target.querySelector("input"), name = inp.value.trim();
   if (!name || !db) return;
-  inp.value = "";
-  if (kind === "accessi") await addAccess(name); else await createItem(kind, name);
+  inp.value = ""; await createItem(kind, name);
 });
 
 $("szReserve").addEventListener("click", () => { const sid = openStock; $("dlgSize").close(); openReserve({ stockId: sid }); });
 $("szDelete").addEventListener("click", async e => {
   if (!armed(e.currentTarget)) return;
-  try { await DB.del("stock", openStock); $("dlgSize").close(); toast("Misura rimossa"); }
+  try { await db.collection("stock").doc(openStock).delete(); $("dlgSize").close(); toast("Misura rimossa"); }
   catch (ex) { $("szErr").textContent = dbErr(ex); $("szErr").hidden = false; }
 });
 
@@ -951,9 +850,9 @@ $("fRes").addEventListener("submit", async e => {
     for (let i = 0; i < n; i++) items.push({ stockId: sid, lineId: s.lineId, linea: lineName(s.lineId), d: s.d, l: s.l });
   }
   const old = form.editId ? S.prenotazioni.get(form.editId) : null;
-  const doc = cleanRes({ nome, cognome, data: noDate ? "" : $("rData").value, sede: P.rSede.value, dottoreId: P.rDoc.value, dottore: docName(P.rDoc.value), note: $("rNote").value.trim(), createdAt: old?.createdAt, createdBy: old?.createdBy }, items);
+  const doc = cleanRes({ nome, cognome, data: noDate ? "" : $("rData").value, sede: P.rSede.value, dottoreId: P.rDoc.value, dottore: docName(P.rDoc.value), note: $("rNote").value.trim(), createdAt: old?.createdAt }, items);
   try {
-    await DB.set("prenotazioni", form.editId || newId("p"), doc);
+    await db.collection("prenotazioni").doc(form.editId || newId("p")).set(doc);
     save("doc", P.rDoc.value);
     $("dlgRes").close();
     toast(form.editId ? "Prenotazione aggiornata" : `${plural(items.length, "impianto riservato", "impianti riservati")} a ${cognome} ${nome}`);
@@ -973,8 +872,9 @@ $("fAdd").addEventListener("submit", async e => {
   if (!(n > 0)) return fail("La quantità deve essere almeno 1.");
   const id = stockKey(lineId, d, l), s = S.stock.get(id);
   try {
-    if (s) await DB.update("stock", id, { qty: (s.qty || 0) + n, updatedAt: new Date().toISOString() });
-    else await DB.set("stock", id, { lineId, d, l, qty: n, updatedAt: new Date().toISOString() });
+    const ref = db.collection("stock").doc(id);
+    if (s) await ref.update({ qty: (s.qty || 0) + n, updatedAt: new Date().toISOString() });
+    else await ref.set({ lineId, d, l, qty: n, updatedAt: new Date().toISOString() });
     save("line", lineId);
     toast(`+${n} ${lineName(lineId)} Ø ${mm(d)} × ${mm(l)}`);
     $("aDia").value = ""; $("aLen").value = ""; $("aQty").value = 1; P.aKnown.value = null;
@@ -983,125 +883,16 @@ $("fAdd").addEventListener("submit", async e => {
 
 render();
 
-/* ---------- database Supabase ---------- */
-var sb = null, userEmail = "", subscribed = false, renderQueued = 0;
-function KEY(t) { return t === "accessi" ? "email" : "id"; }
-function toSnake(k) { return k.replace(/[A-Z]/g, c => "_" + c.toLowerCase()); }
-function toCamel(k) { return k.replace(/_([a-z])/g, (_, c) => c.toUpperCase()); }
-function fromRow(row) {
-  const o = {};
-  for (const k in row) if (k !== "id") o[toCamel(k)] = row[k];
-  if (o.d != null) o.d = Number(o.d);
-  if (o.l != null) o.l = Number(o.l);
-  return o;
-}
-function toRow(obj) { const o = {}; for (const k in obj) o[toSnake(k)] = obj[k]; return o; }
-function check(res) { if (res.error) throw res.error; return res; }
-var DB = {
-  async set(t, id, obj) {
-    check(await sb.from(t).upsert({ ...toRow(obj), [KEY(t)]: id }));
-    S[t].set(id, { ...obj }); scheduleRender();
-  },
-  async update(t, id, patch) {
-    check(await sb.from(t).update(toRow(patch)).eq(KEY(t), id));
-    const cur = S[t].get(id); if (cur) S[t].set(id, { ...cur, ...patch }); scheduleRender();
-  },
-  async del(t, id) {
-    check(await sb.from(t).delete().eq(KEY(t), id));
-    S[t].delete(id); scheduleRender();
-  },
-};
-function scheduleRender() { if (!renderQueued) renderQueued = requestAnimationFrame(() => { renderQueued = 0; render(); }); }
-
-async function loadAll() {
-  const tables = Object.keys(S);
-  const results = await Promise.all(tables.map(t => sb.from(t).select("*").limit(10000)));
-  results.forEach((r, i) => {
-    check(r);
-    const t = tables[i]; S[t].clear();
-    for (const row of r.data) S[t].set(row[KEY(t)], fromRow(row));
-    loaded[t] = true;
-  });
-  $("offline").hidden = true;
+(async () => {
+  const use = window.claude && window.claude.use ? n => window.claude.use(n) : async () => null;
+  const [user, store] = await Promise.all([use("user"), use("db")]);
+  if (user) { try { if ((await user.can("data.write")) === false) { canWrite = false; $("readonly").hidden = false; } } catch (e) {} }
+  if (!store) { $("offline").hidden = false; render(); return; }
+  db = store;
+  const fail = e => { if (e && e.code === "revoked") { db = null; $("offline").hidden = false; } render(); };
+  for (const kind of Object.keys(S)) {
+    db.collection(kind).onSnapshot(snap => { S[kind].clear(); snap.docs.forEach(d => S[kind].set(d.id, d.data())); loaded[kind] = true; render(); }, fail);
+  }
   render();
-}
-function resync() { if (db) loadAll().catch(() => { $("offline").hidden = false; }); }
-
-function subscribe() {
-  if (subscribed) return; subscribed = true;
-  sb.channel("valigia")
-    .on("postgres_changes", { event: "*", schema: "public" }, p => {
-      const t = p.table; if (!S[t]) return;
-      const k = KEY(t);
-      if (p.eventType === "DELETE") { if (p.old && p.old[k] != null) S[t].delete(p.old[k]); }
-      else S[t].set(p.new[k], fromRow(p.new));
-      scheduleRender();
-    })
-    .subscribe(status => { if (status === "SUBSCRIBED") resync(); });
-}
-// quando l'app torna in primo piano (iPhone), ricarica i dati
-document.addEventListener("visibilitychange", () => { if (!document.hidden) resync(); });
-window.addEventListener("online", resync);
-setInterval(() => { if (!document.hidden) resync(); }, 60000);
-
-/* ---------- accesso ---------- */
-function show(view) { for (const v of ["setupView", "authView", "deniedView", "appView"]) $(v).hidden = v !== view; }
-function authFail(m) { const e = $("authErr"); e.textContent = m; e.hidden = !m; }
-
-async function enter(session) {
-  if (!session) { db = null; show("authView"); return; }
-  userEmail = session.user.email || "";
-  const { data: ok, error } = await sb.rpc("is_allowed");
-  if (error) { show("authView"); authFail("Non riesco a verificare l'accesso. Controlla la connessione e riprova."); return; }
-  if (!ok) { $("deniedEmail").textContent = userEmail; show("deniedView"); return; }
-  db = sb; canWrite = true;
-  $("meEmail").textContent = userEmail;
-  show("appView"); render();
-  try { await loadAll(); } catch (e) { $("offline").hidden = false; render(); }
-  subscribe();
-}
-
-let signUpMode = false;
-$("authSwitch").addEventListener("click", () => {
-  signUpMode = !signUpMode; authFail("");
-  $("authSubmit").textContent = signUpMode ? "Crea account" : "Entra";
-  $("authSwitch").textContent = signUpMode ? "Hai già una password? Entra" : "Primo accesso? Crea la tua password";
-  $("authIntro").textContent = signUpMode ? "Usa l'email che hai comunicato a chi gestisce l'app e scegli una password di almeno 8 caratteri." : "Entra con la tua email e la tua password.";
-  $("uPass").setAttribute("autocomplete", signUpMode ? "new-password" : "current-password");
-});
-$("fAuth").addEventListener("submit", async e => {
-  e.preventDefault(); authFail("");
-  const email = $("uEmail").value.trim().toLowerCase(), password = $("uPass").value;
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return authFail("Scrivi un indirizzo email valido.");
-  if (signUpMode && password.length < 8) return authFail("La password deve avere almeno 8 caratteri.");
-  if (!password) return authFail("Scrivi la password.");
-  const btn = $("authSubmit"); btn.disabled = true;
-  try {
-    if (signUpMode) {
-      const { data, error } = await sb.auth.signUp({ email, password });
-      if (error) return authFail(/registered|exists/i.test(error.message) ? "Questa email ha già un account: torna su “Entra”." : "Registrazione non riuscita: " + error.message);
-      if (!data.session) return authFail("Account creato, ma Supabase chiede la conferma via email. Chi gestisce l'app deve disattivare “Confirm email”.");
-      await enter(data.session);
-    } else {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) return authFail(/invalid/i.test(error.message) ? "Email o password non corrette. Se è il tuo primo accesso, tocca “Primo accesso”." : "Accesso non riuscito: " + error.message);
-      await enter(data.session);
-    }
-  } catch (ex) { authFail("Connessione assente. Riprova quando c'è rete."); }
-  finally { btn.disabled = false; }
-});
-$("deniedRetry").addEventListener("click", async () => { const { data } = await sb.auth.getSession(); enter(data.session); });
-async function logout() { try { await sb.auth.signOut(); } catch (e) {} location.reload(); }
-$("deniedOut").addEventListener("click", logout);
-$("logout").addEventListener("click", logout);
-
-(function boot() {
-  const cfg = window.VALIGIA_CONFIG || {};
-  if (!window.supabase || !cfg.supabaseUrl || !cfg.supabaseAnonKey || /INSERISCI/.test(cfg.supabaseUrl + cfg.supabaseAnonKey)) { show("setupView"); return; }
-  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
-  sb.auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT") { db = null; show("authView"); } });
-  sb.auth.getSession().then(({ data }) => enter(data.session)).catch(() => show("authView"));
 })();
 </script>
-</body>
-</html>

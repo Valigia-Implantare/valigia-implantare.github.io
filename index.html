@@ -279,7 +279,21 @@ button.tooth { cursor: pointer; }
 .lrow .imp .num { font-weight: 700; }
 .lrow .sub { font-size: 13px; color: var(--muted); grid-column: 1; }
 .lrow b, .lrow .imp { grid-column: 1; }
-.lrow .btn { grid-row: 1 / span 3; grid-column: 2; }
+.lrow .lacts { grid-row: 1 / span 3; grid-column: 2; display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.stags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.otag { font-size: 12px; font-weight: 700; color: var(--warn); background: var(--warn-bg); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.otag.done { color: var(--ok); background: var(--ok-bg); }
+.srow-wrap { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px; }
+.qbtn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; padding: 7px 10px; font-weight: 700; font-size: 13px; white-space: nowrap; color: var(--warn); }
+.qbtn[aria-pressed="true"] { background: var(--warn-bg); border-color: var(--warn); }
+.ordcard { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.ordcard h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.ordcard .oline { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.ordcard .oline b { font-family: var(--f-num); }
+.ordbox { background: var(--surface-2); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.ordbox .orow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.ordbox .lbl { font-weight: 700; }
+.ordbox .lbl small { display: block; color: var(--muted); font-weight: 500; font-size: 13px; }
 nav.tabs button { font-size: 11px; }
 
 /* base della web app (sostituisce lo scheletro di claude.ai) */
@@ -472,6 +486,7 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
     </div>
     <div class="stockbox" id="szStock"></div>
     <p class="err" id="szErr" hidden></p>
+    <div class="grp"><span class="glabel">Riordino</span><div class="ordbox" id="szOrder"></div></div>
     <div class="grp"><span class="glabel">Pazienti con questa misura prenotata</span><div id="szRes"></div></div>
     <button class="btn primary block" type="button" id="szReserve">Prenota questa misura</button>
     <button class="btn danger" type="button" id="szDelete" hidden data-confirm="Tocca di nuovo per rimuovere">Rimuovi questa misura dall'elenco</button>
@@ -510,7 +525,7 @@ const S = { linee: new Map(), dottori: new Map(), stock: new Map(), prenotazioni
 const loaded = { linee: false, dottori: false, stock: false, prenotazioni: false, registro: false, accessi: false };
 const ui = { tab: "mag", line: "ALL", sede: "ALL", logQ: "", renaming: null, deleting: null };
 let openStock = null;
-const form = { editId: null, cart: new Map(), patient: null, teeth: new Set(), teethDone: new Set() }; // cart: stockId -> quantità
+const form = { ordQty: 1, editId: null, cart: new Map(), patient: null, teeth: new Set(), teethDone: new Set() }; // cart: stockId -> quantità
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const mm = n => String(n).replace(".", ",");
@@ -650,9 +665,58 @@ function render() {
   renderDetail();
 }
 
+const needsOrder = sid => { const s = S.stock.get(sid); return !!s && S.linee.has(s.lineId) && (!availFor(sid) || !!s.riordino); };
+function orderTag(s) {
+  if (s.riordino === "da_ordinare") return `<span class="otag">da ordinare ×${s.riordinoQty || 1}</span>`;
+  if (s.riordino === "ordinato") return `<span class="otag done">ordinato ×${s.riordinoQty || 1}</span>`;
+  return "";
+}
+function orderListHTML() {
+  const flagged = [...S.stock.entries()].filter(([, s]) => s.riordino && S.linee.has(s.lineId));
+  const block = (state, title) => {
+    const rows = flagged.filter(([, s]) => s.riordino === state).sort(([, a], [, b]) => byName(lineName(a.lineId), lineName(b.lineId)) || a.d - b.d || a.l - b.l);
+    return rows.length ? `<span class="glabel">${title}</span>` + rows.map(([, s]) => `<div class="oline"><span>${esc(lineName(s.lineId))} <span class="num">Ø ${mm(s.d)} × ${mm(s.l)}</span></span><b>×${s.riordinoQty || 1}</b></div>`).join("") : "";
+  };
+  const a = block("da_ordinare", "Da ordinare"), b = block("ordinato", "Ordinati, in arrivo");
+  return `<div class="ordcard"><h2>Lista d'ordine</h2>${a || b ? a + b : `<p class="hint">Nessuna misura segnata. Tocca “Ordina” accanto a una misura, oppure aprila e scegli la quantità.</p>`}</div>`;
+}
+function renderOrder() {
+  const s = S.stock.get(openStock), box = $("szOrder"); if (!s) return;
+  const w = canWrite && db;
+  if (!s.riordino) {
+    box.innerHTML = `<div class="orow"><div class="lbl">Da riordinare?<small>Scegli quanti pezzi ordinare</small></div>${w ? `<div class="qty sm"><button type="button" data-ord="qminus" aria-label="Meno">−</button><span class="v">${form.ordQty}</span><button type="button" data-ord="qplus" aria-label="Più">+</button></div>` : ""}</div>` +
+      (w ? `<button class="btn primary" type="button" data-ord="mark">Segna da ordinare</button>` : "");
+  } else if (s.riordino === "da_ordinare") {
+    box.innerHTML = `<div class="orow"><div class="lbl">Da ordinare<small>Segnato il ${esc(fmtDate(s.riordinoAt, true))}</small></div>${w ? `<div class="qty sm"><button type="button" data-ord="minus" aria-label="Meno">−</button><span class="v">${s.riordinoQty || 1}</span><button type="button" data-ord="plus" aria-label="Più">+</button></div>` : `<b class="num">×${s.riordinoQty || 1}</b>`}</div>` +
+      (w ? `<div class="acts wrapit"><button class="btn primary" type="button" data-ord="ordered">Ordinato</button><button class="btn" type="button" data-ord="clear">Togli dalla lista</button></div>` : "");
+  } else {
+    box.innerHTML = `<div class="orow"><div class="lbl">Ordinato, in arrivo<small>Ordinato il ${esc(fmtDate(s.riordinoAt, true))}</small></div><b class="num">×${s.riordinoQty || 1}</b></div>` +
+      (w ? `<div class="acts wrapit"><button class="btn primary" type="button" data-ord="arrived">Arrivato: +${s.riordinoQty || 1} in valigia</button><button class="btn" type="button" data-ord="clear">Togli dalla lista</button></div>` : "");
+  }
+}
+async function orderAction(act, sid) {
+  const id = sid || openStock, s = S.stock.get(id); if (!s) return;
+  const now = new Date().toISOString(), n = s.riordinoQty || 1;
+  const patch = {
+    mark: { riordino: "da_ordinare", riordinoQty: form.ordQty, riordinoAt: now },
+    quick: s.riordino ? { riordino: "", riordinoQty: 0, riordinoAt: null } : { riordino: "da_ordinare", riordinoQty: 1, riordinoAt: now },
+    plus: { riordinoQty: n + 1 },
+    minus: { riordinoQty: Math.max(1, n - 1) },
+    ordered: { riordino: "ordinato", riordinoAt: now },
+    arrived: { qty: (s.qty || 0) + n, riordino: "", riordinoQty: 0, riordinoAt: null, updatedAt: now },
+    clear: { riordino: "", riordinoQty: 0, riordinoAt: null },
+  }[act];
+  if (!patch) return;
+  try {
+    await DB.update("stock", id, patch);
+    if (act === "arrived") toast(`+${n} ${lineName(s.lineId)} Ø ${mm(s.d)} × ${mm(s.l)} in valigia`);
+    if (act === "mark" || (act === "quick" && !s.riordino)) toast("Aggiunto alla lista d'ordine");
+  } catch (e) { toast(dbErr(e)); }
+}
+
 function renderKpis(nRes) {
   let av = 0, out = 0;
-  for (const sid of S.stock.keys()) { const a = availFor(sid); av += a; if (!a) out++; }
+  for (const sid of S.stock.keys()) { av += availFor(sid); if (needsOrder(sid)) out++; }
   $("kpis").innerHTML =
     `<div class="kpi ok"><b>${av}</b><span>Disponibili</span></div>` +
     `<div class="kpi res"><b>${nRes}</b><span>Prenotati</span></div>` +
@@ -665,16 +729,16 @@ function renderMag() {
   if (!allLoaded()) { box.innerHTML = `<div class="empty"><p>Caricamento…</p></div>`; return; }
   const lines = lineItems(false);
   if (ui.line !== "ALL" && ui.line !== "ZERO" && !S.linee.has(ui.line)) ui.line = "ALL";
-  const nZero = [...S.stock.keys()].filter(sid => S.linee.has(S.stock.get(sid).lineId) && !availFor(sid)).length;
+  const nZero = [...S.stock.keys()].filter(needsOrder).length;
   fl.innerHTML = lines.length ? [{ id: "ALL", label: "Tutte" }, ...(nZero ? [{ id: "ZERO", label: `Da riordinare (${nZero})` }] : []), ...lines].map(l => `<button type="button" class="fchip" data-line="${esc(l.id)}" aria-pressed="${ui.line === l.id}">${esc(l.label)}</button>`).join("") : "";
   if (!lines.length) {
     box.innerHTML = `<div class="empty"><h2>La valigia è vuota</h2><p>Tocca <b>Carica</b> in alto: scegli o crea la marca (per esempio “Straumann BLT”), scrivi diametro, lunghezza e quantità. Marche e dottori si gestiscono anche dalla scheda <b>Elenchi</b>.</p></div>`;
     return;
   }
-  let html = "";
+  let html = ui.line === "ZERO" ? orderListHTML() : "";
   for (const l of lines) {
     if (ui.line !== "ALL" && ui.line !== "ZERO" && ui.line !== l.id) continue;
-    const sizes = sizesOf(l.id).filter(([sid]) => ui.line !== "ZERO" || !availFor(sid));
+    const sizes = sizesOf(l.id).filter(([sid]) => ui.line !== "ZERO" || needsOrder(sid));
     if (ui.line === "ZERO" && !sizes.length) continue;
     const av = sizes.reduce((a, [sid]) => a + availFor(sid), 0);
     html += `<article class="lcard"><div class="lhead"><h2>${esc(l.label)}</h2><span><b>${av}</b> disponibili</span></div>`;
@@ -683,7 +747,10 @@ function renderMag() {
       html += `<div class="dgroup"><div class="dlabel">Diametro ${mm(d)} mm</div>`;
       for (const [sid, s] of sizes.filter(([, s]) => s.d === d)) {
         const a = availFor(sid), r = reservedFor(sid);
-        html += `<button type="button" class="srow" data-open="${esc(sid)}"><span class="size">Ø ${mm(s.d)} × ${mm(s.l)}<small>mm</small></span>${r ? `<span class="rtag">${r} pren.</span>` : "<span></span>"}<span class="pill ${status(a)}">${a ? `<b>${a}</b> disp.` : (s.qty || 0) > 0 ? "tutti prenotati" : "esaurito"}</span></button>`;
+        const row = `<button type="button" class="srow" data-open="${esc(sid)}"><span class="size">Ø ${mm(s.d)} × ${mm(s.l)}<small>mm</small></span><span class="stags">${r ? `<span class="rtag">${r} pren.</span>` : ""}${orderTag(s)}</span><span class="pill ${status(a)}">${a ? `<b>${a}</b> disp.` : (s.qty || 0) > 0 ? "tutti prenotati" : "esaurito"}</span></button>`;
+        html += ui.line === "ZERO" && canWrite && db
+          ? `<div class="srow-wrap">${row}<button type="button" class="qbtn" data-ord="quick" data-sid="${esc(sid)}" aria-pressed="${!!s.riordino}">${s.riordino ? "✓ In lista" : "Ordina"}</button></div>`
+          : row;
       }
       html += `</div>`;
     }
@@ -749,7 +816,7 @@ function renderLog() {
     const m = e.data ? new Date(e.data.slice(0, 4), Number(e.data.slice(5, 7)) - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" }) : "Senza data";
     if (m !== month) { if (open) html += `</div>`; html += `<div class="month">${m} · ${rows.filter(([, x]) => (x.data ? new Date(x.data.slice(0, 4), Number(x.data.slice(5, 7)) - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" }) : "Senza data") === m).length}</div><div class="logcard">`; month = m; open = true; }
     html += `<div class="lrow"><b>${esc(e.cognome)} ${esc(e.nome)}</b>
-      ${canWrite && db ? `<button class="btn sm" type="button" data-undo="${esc(id)}" data-confirm="Rimetti in valigia">Annulla</button>` : ""}
+      ${canWrite && db ? `<div class="lacts"><button class="btn sm" type="button" data-undo="${esc(id)}" data-confirm="Conferma">Rimetti in valigia</button><button class="btn sm danger" type="button" data-dellog="${esc(id)}" data-confirm="Elimina?">Elimina</button></div>` : ""}
       <div class="imp">${itemLabel(e)}</div>
       <div class="sub">${fmtDate(e.data, true)} · ${sedeName(e.sede)} · ${esc(e.dottore || "—")}${e.createdBy ? ` · segnato da ${esc(e.createdBy.split("@")[0])}` : ""}</div></div>`;
   }
@@ -831,6 +898,7 @@ function renderDetail() {
   const who = [...S.prenotazioni.values()].map(x => ({ x, n: itemsOf(x).filter(it => it.stockId === openStock).length })).filter(o => o.n)
     .sort((p, q) => (p.x.data || "9").localeCompare(q.x.data || "9"));
   $("szRes").innerHTML = who.length ? who.map(({ x, n }) => `<div class="mini-res"><div class="info"><b>${esc(x.cognome)} ${esc(x.nome)}${n > 1 ? ` · ×${n}` : ""}</b><span>${fmtDate(x.data)} · ${sedeName(x.sede)} · ${esc(docName(x.dottoreId, x.dottore))}</span></div></div>`).join("") : `<p class="hint">Nessuna prenotazione.</p>`;
+  renderOrder();
   $("szReserve").hidden = !(canWrite && db) || !a;
   $("szDelete").hidden = !(canWrite && db) || r > 0;
   $("szDelete").textContent = (s.qty || 0) > 0 ? `Rimuovi questa misura (${s.qty} in valigia)` : "Rimuovi questa misura dall'elenco";
@@ -882,6 +950,10 @@ async function cancelRes(id) {
   const r = S.prenotazioni.get(id);
   try { await DB.del("prenotazioni", id); toast(`Prenotazione di ${r ? r.cognome : "paziente"} annullata`); }
   catch (e) { toast(dbErr(e)); }
+}
+async function deleteLog(id) {
+  const e = S.registro.get(id);
+  try { await DB.del("registro", id); toast(`Eliminato dal registro${e ? ": " + e.cognome : ""}`); } catch (ex) { toast(dbErr(ex)); }
 }
 async function undoLog(id) {
   const e = S.registro.get(id); if (!e) return;
@@ -976,7 +1048,7 @@ function openReserve(opts = {}) {
   }
   showPatient(); resPickers().forEach(p => p.render()); renderCart(); renderTeeth();
   $("dlgRes").showModal();
-  if (!form.patient) setTimeout(() => $("adLast").focus(), 50);
+  if (!form.patient) { setTimeout(() => $("adLast").focus(), 50); alfadocs("ping").catch(() => {}); }
 }
 function openAdd() {
   $("fAdd").reset(); $("aErr").hidden = true; $("aQty").value = 1;
@@ -1006,27 +1078,38 @@ function matchDoctor(opName) {
   for (const [id, v] of S.dottori) { const d = tokens(v.name); const score = t.filter(x => d.includes(x)).length; if (score > bestScore) { best = id; bestScore = score; } }
   return bestScore >= Math.min(2, t.length) ? best : null;
 }
+let adSeq = 0, adTimer = 0;
 async function adSearch() {
+  clearTimeout(adTimer);
+  const seq = ++adSeq;
   const last = $("adLast").value.trim(), first = $("adFirst").value.trim(), box = $("adResults");
   if (last.length < 2) { box.innerHTML = `<p class="hint">Scrivi il cognome completo.</p>`; return; }
   box.innerHTML = `<p class="hint">Cerco in AlfaDocs…</p>`;
   try {
     const r = await alfadocs("search", { lastName: last, firstName: first });
+    if (seq !== adSeq) return;
     const failed = r.errors || [];
     const note = failed.length ? `<p class="hint">Ricerca non riuscita a ${failed.map(sedeName).join(", ")}.</p>` : "";
     box.innerHTML = r.results.length
       ? r.results.map(p => `<button type="button" data-adp="${esc(p.sede)}:${esc(p.id)}" data-by="${esc(p.birthYear)}"><span>${esc(cap(p.lastName))} ${esc(cap(p.firstName))}</span><small>${esc(sedeName(p.sede))}${p.birthYear ? " · nato nel " + esc(p.birthYear) : ""}</small></button>`).join("") +
         (r.total > r.results.length ? `<p class="hint">Mostro ${r.results.length} di ${r.total}: aggiungi il nome per restringere.</p>` : "") + note
       : `<p class="hint">Nessun paziente con questo cognome. AlfaDocs cerca il cognome intero: controlla come è scritto.</p>` + note;
-  } catch (e) { box.innerHTML = `<p class="hint">AlfaDocs non risponde in questo momento. Riprova tra poco.</p>`; }
+  } catch (e) { if (seq !== adSeq) return; box.innerHTML = `<p class="hint">AlfaDocs non risponde in questo momento. Riprova tra poco.</p>`; }
   $("adManual").hidden = false;
 }
-async function adPick(ref, birthYear) {
+async function adPick(ref, birthYear, label) {
   const [sede, id] = String(ref).split(":");
-  const box = $("adResults");
-  box.innerHTML = `<p class="hint">Leggo piano di cura e agenda…</p>`;
+  const [cognome = "", ...rest] = String(label || "").split(" ");
+  form.patient = { nome: rest.join(" "), cognome, birthYear, alfadocs: { sede, id: Number(id) } };
+  P.rSede.value = sede;
+  $("adResults").innerHTML = "";
+  form.teeth = new Set(); form.teethDone = new Set();
+  showPatient(); resPickers().forEach(p => p.render()); renderTeeth();
+  $("rTeethNote").textContent = "Leggo il piano di cura in AlfaDocs…"; noteOut("rDateNote", "Leggo l'agenda in AlfaDocs…");
+  const pickSeq = ++adSeq;
   try {
     const d = await alfadocs("patient", { sede, patientId: id });
+    if (pickSeq !== adSeq || !form.patient || form.patient.alfadocs?.id !== Number(id)) return;
     form.patient = { nome: cap(d.patient.firstName), cognome: cap(d.patient.lastName), birthYear, alfadocs: { sede: d.sede, id: Number(id) } };
     P.rSede.value = d.sede;
     const na = d.nextAppointment;
@@ -1037,9 +1120,11 @@ async function adPick(ref, birthYear) {
     else noteOut("rDocNote", na && na.operator ? `In agenda: ${na.operator}. Sceglilo qui sopra o aggiungilo.` : "");
     form.teeth = new Set(d.teeth.filter(t => !t.done).map(t => String(t.tooth)));
     form.teethDone = new Set(d.teeth.filter(t => t.done).map(t => String(t.tooth)));
-    box.innerHTML = "";
     showPatient(); resPickers().forEach(p => p.render()); renderTeeth();
-  } catch (e) { box.innerHTML = `<p class="hint">Non riesco a leggere i dati del paziente da AlfaDocs. Riprova tra poco.</p>`; }
+  } catch (e) {
+    if (pickSeq !== adSeq) return;
+    renderTeeth(); $("rTeethNote").textContent = "Piano di cura non disponibile ora: tocca i denti a mano."; noteOut("rDateNote");
+  }
 }
 $("adManual").addEventListener("click", () => { $("pSearch").hidden = true; $("pManual").hidden = false; $("rCognome").value = cap($("adLast").value.trim()); $("rNome").value = cap($("adFirst").value.trim()); $("rCognome").focus(); });
 $("pManualBack").addEventListener("click", () => { $("pManual").hidden = true; $("pSearch").hidden = false; });
@@ -1056,7 +1141,9 @@ $("rTeeth").addEventListener("click", e => { const b = e.target.closest("[data-t
 $("adGo").addEventListener("click", adSearch);
 $("adLast").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); adSearch(); } });
 $("adFirst").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); adSearch(); } });
-$("adResults").addEventListener("click", e => { const b = e.target.closest("[data-adp]"); if (b) adPick(b.dataset.adp, b.dataset.by); });
+$("adResults").addEventListener("click", e => { const b = e.target.closest("[data-adp]"); if (b) adPick(b.dataset.adp, b.dataset.by, b.querySelector("span").textContent); });
+// ricerca automatica mentre si scrive (AlfaDocs vuole il cognome intero: parte quando ci si ferma)
+for (const id of ["adLast", "adFirst"]) $(id).addEventListener("input", () => { clearTimeout(adTimer); if ($("adLast").value.trim().length >= 3) adTimer = setTimeout(adSearch, 500); });
 
 $("rNoDate").addEventListener("click", () => { setNoDate($("rNoDate").getAttribute("aria-pressed") !== "true"); noteOut("rDateNote"); });
 $("logQ").addEventListener("input", e => { ui.logQ = e.target.value; renderLog(); });
@@ -1064,10 +1151,11 @@ document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e =
 $("dlgSize").addEventListener("close", () => { openStock = null; });
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-open],[data-step],[data-used],[data-allused],[data-rmitem],[data-cancel],[data-edit],[data-undo],[data-cart],[data-line],[data-sede],[data-ren],[data-ren-save],[data-ren-cancel],[data-del],[data-del-go],[data-del-cancel],[data-delacc]");
+  const t = e.target.closest("[data-ord],[data-dellog],[data-open],[data-step],[data-used],[data-allused],[data-rmitem],[data-cancel],[data-edit],[data-undo],[data-cart],[data-line],[data-sede],[data-ren],[data-ren-save],[data-ren-cancel],[data-del],[data-del-go],[data-del-cancel],[data-delacc]");
   if (!t || t.disabled) return;
   const d = t.dataset;
-  if (d.open) { openStock = d.open; $("szErr").hidden = true; $("dlgSize").showModal(); renderDetail(); return; }
+  if (d.ord) { if (d.ord === "qplus") { form.ordQty++; renderOrder(); } else if (d.ord === "qminus") { form.ordQty = Math.max(1, form.ordQty - 1); renderOrder(); } else orderAction(d.ord, d.sid); return; }
+  if (d.open) { form.ordQty = 1; openStock = d.open; $("szErr").hidden = true; $("dlgSize").showModal(); renderDetail(); return; }
   if (d.step) return step(Number(d.step));
   if (d.used) { if (armed(t)) markUsed(d.used, Number(d.i)); return; }
   if (d.allused) { if (armed(t)) markAllUsed(d.allused); return; }
@@ -1075,6 +1163,7 @@ document.addEventListener("click", e => {
   if (d.cancel) { if (armed(t)) cancelRes(d.cancel); return; }
   if (d.edit) return openReserve({ editId: d.edit });
   if (d.undo) { if (armed(t)) undoLog(d.undo); return; }
+  if (d.dellog) { if (armed(t)) deleteLog(d.dellog); return; }
   if (d.cart) { const n = (form.cart.get(d.cart) || 0) + Number(d.d); if (n <= 0) form.cart.delete(d.cart); else form.cart.set(d.cart, n); renderCart(); return; }
   if (d.line) { ui.line = d.line; if (t.classList.contains("kpi")) { ui.tab = "mag"; render(); document.getElementById("lineFilters").scrollIntoView({ block: "start", behavior: "smooth" }); } else renderMag(); return; }
   if (d.sede && t.classList.contains("fchip")) { ui.sede = d.sede; renderRes(); return; }

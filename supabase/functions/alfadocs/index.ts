@@ -46,25 +46,40 @@ const ALLOWED = [
 ];
 
 // ---------- letture per l'app ----------
-type Ctx = { base: string; operators: Map<number, string>; chairs: Map<number, string>; at: number };
-const ctxs = new Map<string, Ctx>();
+// Studio e archivio di ogni sede non cambiano: evitano una chiamata a /me per ogni ricerca.
+const KNOWN_BASE: Record<string, string> = {
+  FA: "/practices/35559/archives/68705",
+  BO: "/practices/35561/archives/68707",
+};
+const bases = new Map<string, string>();
+const lookups = new Map<string, { operators: Map<number, string>; chairs: Map<number, string>; at: number }>();
+const badUntil = new Map<string, number>(); // sedi con chiave rifiutata: saltate per 10 minuti
 const list = (r: unknown) =>
   (Array.isArray(r) ? r : ((r as { data?: unknown[] }).data ?? (r as { results?: unknown[] }).results ?? [])) as Record<string, unknown>[];
 
-async function context(sede: string): Promise<Ctx> {
-  const c = ctxs.get(sede);
-  if (c && Date.now() - c.at < 10 * 60_000) return c;
+async function baseOf(sede: string): Promise<string> {
+  if (KNOWN_BASE[sede]) return KNOWN_BASE[sede];
+  const cached = bases.get(sede); if (cached) return cached;
   const me = (await get(sede, "/me")) as { data: { practiceId: number; archiveId: number } };
   const base = `/practices/${me.data.practiceId}/archives/${me.data.archiveId}`;
+  bases.set(sede, base);
+  return base;
+}
+async function lookupsOf(sede: string, base: string) {
+  const c = lookups.get(sede);
+  if (c && Date.now() - c.at < 30 * 60_000) return c;
   const [ops, chs] = await Promise.all([get(sede, base + "/operators"), get(sede, base + "/chairs")]);
   const fresh = {
-    base,
     operators: new Map(list(ops).map((o) => [Number(o.id), String(o.name ?? `${o.firstName ?? ""} ${o.lastName ?? ""}`).trim()])),
     chairs: new Map(list(chs).map((c) => [Number(c.id), String(c.name ?? "")])),
     at: Date.now(),
   };
-  ctxs.set(sede, fresh);
+  lookups.set(sede, fresh);
   return fresh;
+}
+const activeSedi = () => SEDI.filter((s) => (badUntil.get(s) ?? 0) < Date.now());
+function noteFailure(sede: string, e: unknown) {
+  if (e instanceof AlfaError && (e.status === 401 || e.status === 403)) badUntil.set(sede, Date.now() + 10 * 60_000);
 }
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -74,11 +89,12 @@ async function searchPatients(p: Record<string, string | number>) {
   const lastName = String(p.lastName ?? "").trim();
   const firstName = String(p.firstName ?? "").trim();
   if (lastName.length < 2) return { sedi: SEDI, total: 0, results: [], errors: [] };
+  const skipped = SEDI.filter((x) => !activeSedi().includes(x));
   const params: Record<string, string | number> = { lastName, limit: 20 };
   if (firstName) params.firstName = firstName;
-  const per = await Promise.all(SEDI.map(async (sede) => {
+  const per = await Promise.all(activeSedi().map(async (sede) => {
     try {
-      const { base } = await context(sede);
+      const base = await baseOf(sede);
       const r = (await get(sede, base + "/patients", params)) as { total?: number; results?: Record<string, unknown>[] };
       return {
         sede, total: r.total ?? 0,
@@ -87,20 +103,22 @@ async function searchPatients(p: Record<string, string | number>) {
           birthYear: typeof x.dateBirth === "string" ? x.dateBirth.slice(0, 4) : "",
         })),
       };
-    } catch { return { sede, total: 0, results: [], error: true }; }
+    } catch (e) { noteFailure(sede, e); return { sede, total: 0, results: [], error: true }; }
   }));
   return {
     sedi: SEDI,
     total: per.reduce((a, x) => a + x.total, 0),
     results: per.flatMap((x) => x.results),
-    errors: per.filter((x) => "error" in x).map((x) => x.sede),
+    errors: [...per.filter((x) => "error" in x).map((x) => x.sede), ...skipped],
   };
 }
 
 async function patientDetail(sede: string, patientId: number) {
   if (!KEYS[sede]) throw new AlfaError(400, "Sede non collegata");
   if (!Number.isFinite(patientId) || patientId <= 0) throw new AlfaError(400, "patientId mancante");
-  const c = await context(sede);
+  const base = await baseOf(sede);
+  const c = { base };
+  const lk = lookupsOf(sede, base).catch(() => ({ operators: new Map<number, string>(), chairs: new Map<number, string>() }));
   const [patient, plans] = await Promise.all([
     get(sede, `${c.base}/patients/${patientId}`) as Promise<{ data?: Record<string, unknown> } & Record<string, unknown>>,
     get(sede, `${c.base}/patients/${patientId}/care-plans`) as Promise<Record<string, unknown>[]>,
@@ -131,6 +149,7 @@ async function patientDetail(sede: string, patientId: number) {
     .filter((a) => a.state !== "cancelled" && String(a.patientId) === String(patientId))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const next = appts[0];
+  const { operators, chairs } = await lk;
 
   return {
     sede,
@@ -138,8 +157,8 @@ async function patientDetail(sede: string, patientId: number) {
     teeth,
     nextAppointment: next ? {
       date: String(next.date).slice(0, 10), sede,
-      chair: c.chairs.get(Number(next.chairId)) ?? "",
-      operator: c.operators.get(Number(next.operatorId)) ?? "",
+      chair: chairs.get(Number(next.chairId)) ?? "",
+      operator: operators.get(Number(next.operatorId)) ?? "",
     } : null,
   };
 }
@@ -166,6 +185,7 @@ Deno.serve(async (req) => {
       const { sede: _s, ...params } = input.params ?? {};
       return json(await get(sede, path, params));
     }
+    if (input.action === "ping") return json({ ok: true, sedi: activeSedi() });
     if (input.action === "search") return json(await searchPatients(input.params ?? {}));
     if (input.action === "patient") return json(await patientDetail(sede, Number(input.params?.patientId)));
     return json({ error: "Azione sconosciuta" }, 400);

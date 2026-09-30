@@ -118,3 +118,8 @@ on conflict do nothing;
 -- Denti e collegamento AlfaDocs nelle prenotazioni
 alter table public.prenotazioni add column if not exists denti jsonb not null default '[]'::jsonb;
 alter table public.prenotazioni add column if not exists alfadocs jsonb;
+
+-- Riordino delle misure: '' | 'da_ordinare' | 'ordinato'
+alter table public.stock add column if not exists riordino text not null default '';
+alter table public.stock add column if not exists riordino_qty integer not null default 0;
+alter table public.stock add column if not exists riordino_at timestamptz;

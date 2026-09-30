@@ -720,7 +720,7 @@ function renderKpis(nRes) {
   $("kpis").innerHTML =
     `<div class="kpi ok"><b>${av}</b><span>Disponibili</span></div>` +
     `<div class="kpi res"><b>${nRes}</b><span>Prenotati</span></div>` +
-    `<button type="button" class="kpi bad" data-line="ZERO" aria-label="Mostra le misure da riordinare"><b>${out}</b><span>Da riordinare ›</span></button>`;
+    `<button type="button" class="kpi bad" data-line="ZERO" aria-label="Apri il riordino"><b>${out}</b><span>Riordino ›</span></button>`;
 }
 
 function renderMag() {
@@ -730,7 +730,7 @@ function renderMag() {
   const lines = lineItems(false);
   if (ui.line !== "ALL" && ui.line !== "ZERO" && !S.linee.has(ui.line)) ui.line = "ALL";
   const nZero = [...S.stock.keys()].filter(needsOrder).length;
-  fl.innerHTML = lines.length ? [{ id: "ALL", label: "Tutte" }, ...(nZero ? [{ id: "ZERO", label: `Da riordinare (${nZero})` }] : []), ...lines].map(l => `<button type="button" class="fchip" data-line="${esc(l.id)}" aria-pressed="${ui.line === l.id}">${esc(l.label)}</button>`).join("") : "";
+  fl.innerHTML = lines.length ? [{ id: "ALL", label: "Tutte" }, { id: "ZERO", label: nZero ? `Riordino (${nZero})` : "Riordino" }, ...lines].map(l => `<button type="button" class="fchip" data-line="${esc(l.id)}" aria-pressed="${ui.line === l.id}">${esc(l.label)}</button>`).join("") : "";
   if (!lines.length) {
     box.innerHTML = `<div class="empty"><h2>La valigia è vuota</h2><p>Tocca <b>Carica</b> in alto: scegli o crea la marca (per esempio “Straumann BLT”), scrivi diametro, lunghezza e quantità. Marche e dottori si gestiscono anche dalla scheda <b>Elenchi</b>.</p></div>`;
     return;
@@ -738,7 +738,7 @@ function renderMag() {
   let html = ui.line === "ZERO" ? orderListHTML() : "";
   for (const l of lines) {
     if (ui.line !== "ALL" && ui.line !== "ZERO" && ui.line !== l.id) continue;
-    const sizes = sizesOf(l.id).filter(([sid]) => ui.line !== "ZERO" || needsOrder(sid));
+    const sizes = sizesOf(l.id);
     if (ui.line === "ZERO" && !sizes.length) continue;
     const av = sizes.reduce((a, [sid]) => a + availFor(sid), 0);
     html += `<article class="lcard"><div class="lhead"><h2>${esc(l.label)}</h2><span><b>${av}</b> disponibili</span></div>`;

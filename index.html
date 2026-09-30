@@ -969,8 +969,8 @@ $("fAdd").addEventListener("submit", async e => {
   const fail = m => { err.textContent = m; err.hidden = false; };
   const lineId = P.aLine.value, d = parseMm($("aDia").value), l = parseMm($("aLen").value), n = parseInt($("aQty").value, 10);
   if (!lineId) return fail("Scegli la marca, oppure creala con “+ Nuova marca”.");
-  if (!(d >= 2 && d <= 8)) return fail("Scrivi un diametro valido in millimetri, per esempio 4,1.");
-  if (!(l >= 4 && l <= 25)) return fail("Scrivi una lunghezza valida in millimetri, per esempio 10.");
+  if (!(d >= 1 && d <= 12)) return fail("Scrivi un diametro tra 1 e 12 mm, per esempio 4,1.");
+  if (!(l >= 2 && l <= 80)) return fail("Scrivi una lunghezza tra 2 e 80 mm, per esempio 10.");
   if (!(n > 0)) return fail("La quantità deve essere almeno 1.");
   const id = stockKey(lineId, d, l), s = S.stock.get(id);
   try {

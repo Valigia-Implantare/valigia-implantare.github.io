@@ -930,28 +930,31 @@ async function adSearch() {
   box.innerHTML = `<p class="hint">Cerco in AlfaDocs…</p>`;
   try {
     const r = await alfadocs("search", { lastName: last, firstName: first });
-    if (!r.results.length) { box.innerHTML = `<p class="hint">Nessun paziente trovato. AlfaDocs cerca il cognome intero: controlla come è scritto.</p>`; return; }
-    box.innerHTML = r.results.map(p => `<button type="button" data-adp="${esc(p.id)}">${esc(cap(p.lastName))} ${esc(cap(p.firstName))}<small>${p.birthYear ? "nato nel " + esc(p.birthYear) : ""}</small></button>`).join("") +
-      (r.total > r.results.length ? `<p class="hint">Mostro ${r.results.length} di ${r.total}: aggiungi il nome per restringere.</p>` : "");
+    const missing = SEDI.filter(x => !(r.sedi || []).includes(x.id)).map(x => x.name);
+    const note = (missing.length ? `<p class="hint">Sedi non ancora collegate ad AlfaDocs: ${missing.join(", ")}.</p>` : "") +
+      ((r.errors || []).length ? `<p class="err">Non ho potuto cercare a ${r.errors.map(sedeName).join(", ")}: riprova tra poco.</p>` : "");
+    if (!r.results.length) { box.innerHTML = `<p class="hint">Nessun paziente trovato. AlfaDocs cerca il cognome intero: controlla come è scritto.</p>` + note; return; }
+    box.innerHTML = r.results.map(p => `<button type="button" data-adp="${esc(p.sede)}:${esc(p.id)}"><span>${esc(cap(p.lastName))} ${esc(cap(p.firstName))}</span><small>${esc(sedeName(p.sede))}${p.birthYear ? " · nato nel " + esc(p.birthYear) : ""}</small></button>`).join("") +
+      (r.total > r.results.length ? `<p class="hint">Mostro ${r.results.length} di ${r.total}: aggiungi il nome per restringere.</p>` : "") + note;
   } catch (e) { box.innerHTML = `<p class="err">AlfaDocs non risponde. Riprova tra poco o compila a mano.</p>`; }
 }
-async function adPick(id) {
+async function adPick(ref) {
+  const [sede, id] = String(ref).split(":");
   const box = $("adResults"), info = $("adInfo");
   box.innerHTML = `<p class="hint">Leggo piano di cura e agenda…</p>`;
   try {
-    const d = await alfadocs("patient", { patientId: id });
+    const d = await alfadocs("patient", { sede, patientId: id });
     box.innerHTML = "";
     $("rCognome").value = cap(d.patient.lastName); $("rNome").value = cap(d.patient.firstName);
     const na = d.nextAppointment;
     if (na) { setNoDate(false); $("rData").value = na.date; } else setNoDate(true);
-    if (na && na.sede) P.rSede.value = na.sede;
+    P.rSede.value = d.sede;
     const doc = na ? matchDoctor(na.operator) : null; if (doc) P.rDoc.value = doc;
     const todo = d.teeth.filter(t => !t.done).map(t => t.tooth);
     if (todo.length && !$("rNote").value.trim()) $("rNote").value = (todo.length === 1 ? "Dente " : "Denti ") + todo.join(", ");
     resPickers().forEach(p => p.render());
     info.innerHTML = `<div>${todo.length ? `<b>Impianti da fare: ${todo.length}</b> · ${todo.length === 1 ? "dente" : "denti"} ${esc(todo.join(", "))}` : "<b>Nessun impianto da fare</b> nel piano di cura"}</div>` +
-      (na ? `<div>Prossimo appuntamento: ${esc(fmtDate(na.date, true))} · ${esc(na.chair || "poltrona non indicata")}${na.operator ? " · " + esc(na.operator) : ""}</div>` : `<div>Nessun appuntamento nei prossimi 90 giorni: data “da definire”.</div>`) +
-      (na && !na.sede ? `<div class="err" style="font-size:13px">Sede non riconosciuta dalla poltrona: sceglila qui sotto.</div>` : "") +
+      (na ? `<div>Prossimo appuntamento a ${esc(sedeName(d.sede))}: ${esc(fmtDate(na.date, true))}${na.operator ? " · " + esc(na.operator) : ""}</div>` : `<div>Nessun appuntamento nei prossimi 90 giorni a ${esc(sedeName(d.sede))}: data “da definire”.</div>`) +
       (na && na.operator && !doc ? `<div class="err" style="font-size:13px">Dottore “${esc(na.operator)}” non presente in Elenchi: sceglilo o aggiungilo.</div>` : "") +
       (todo.length ? `<div class="hint">Ora scegli marca e misura: ${todo.length === 1 ? "un impianto" : todo.length + " impianti"}.</div>` : "");
     info.hidden = false;

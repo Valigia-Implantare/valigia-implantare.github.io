@@ -204,6 +204,37 @@ textarea.inp { min-height: 64px; resize: vertical; }
 .err { color: var(--bad); font-size: 14px; font-weight: 600; margin: 0; }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
 
+.pcard { background: var(--hero); color: var(--hero-ink); border-radius: 18px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pcard .pc-name { font-size: 19px; font-weight: 800; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.pcard .pc-sub { font-size: 13px; color: var(--hero-muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 3px; }
+.pcard .pc-src { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; background: var(--hero-2); color: #6fe0b4; border-radius: 6px; padding: 2px 6px; }
+.pcard .btn { background: var(--hero-2); color: var(--hero-ink); border-color: transparent; flex: none; }
+.fieldnote { font-size: 13px; color: var(--muted); margin: 0; }
+.linkbtn2 { background: none; border: 0; color: var(--accent); font-weight: 700; padding: 4px 0; text-align: left; font-size: 14px; }
+.odo { display: flex; flex-direction: column; gap: 6px; background: var(--surface-2); border-radius: 16px; padding: 12px 8px 10px; }
+.odo-row { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)) 8px repeat(8, minmax(0, 1fr)); gap: 3px; align-items: end; }
+.odo-row.low { align-items: start; }
+.odo-mid { width: 2px; background: var(--line); justify-self: center; align-self: stretch; border-radius: 2px; }
+.odo-sep { height: 2px; background: var(--line); border-radius: 2px; margin: 1px 6px; }
+.tooth { display: flex; flex-direction: column; align-items: center; gap: 3px; border: 0; background: none; padding: 0; min-width: 0; font-family: var(--f-num); font-size: 10px; font-weight: 600; color: var(--muted); }
+.odo-row.low .tooth { flex-direction: column-reverse; }
+.tooth i { display: flex; align-items: center; justify-content: center; width: 100%; height: 30px; border-radius: 5px 5px 10px 10px; background: var(--surface); border: 1.5px solid var(--line); font-style: normal; font-size: 12px; color: var(--muted); }
+.odo-row.low .tooth i { border-radius: 10px 10px 5px 5px; }
+.tooth.m i { height: 26px; }
+.tooth[aria-pressed="true"] { color: var(--accent); font-weight: 800; }
+.tooth[aria-pressed="true"] i { background: var(--accent); border-color: var(--accent); }
+.tooth.done i { background: var(--line); border-color: var(--line); }
+button.tooth { cursor: pointer; }
+.odo-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); padding: 2px 4px 0; }
+.odo-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.odo.mini { padding: 6px; gap: 3px; border-radius: 10px; }
+.odo.mini .odo-row { gap: 2px; grid-template-columns: repeat(8, minmax(0, 1fr)) 4px repeat(8, minmax(0, 1fr)); }
+.odo.mini .tooth { font-size: 0; gap: 0; }
+.odo.mini .tooth i { height: 12px; border-radius: 3px; border-width: 1px; font-size: 8px; }
+.odo.mini .tooth[aria-pressed="true"] i { color: var(--accent-ink); font-weight: 800; }
+.rteeth { display: grid; grid-template-columns: minmax(0, 220px) 1fr; gap: 12px; align-items: center; }
+.rteeth span { font-size: 14px; font-weight: 700; }
+@media (max-width: 420px) { .rteeth { grid-template-columns: 1fr; } }
 .adbox { background: var(--accent-soft); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .adrow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
 .adrow > * { min-width: 0; }
@@ -366,33 +397,48 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
       <div><div class="kicker" id="rKicker">Prenotazione</div><h2 id="rTitle">Riserva impianti</h2></div>
       <button class="close" type="button" data-close aria-label="Chiudi">✕</button>
     </div>
-    <div class="adbox" id="adBox">
-      <span class="glabel">Cerca il paziente in AlfaDocs</span>
+    <div class="adbox" id="pSearch">
+      <span class="glabel">Paziente · cerca in AlfaDocs</span>
       <div class="adrow">
         <input class="inp" id="adLast" placeholder="Cognome completo" autocomplete="off" autocapitalize="words">
         <input class="inp" id="adFirst" placeholder="Nome (facoltativo)" autocomplete="off" autocapitalize="words">
         <button class="btn primary" type="button" id="adGo">Cerca</button>
       </div>
       <div class="adres" id="adResults"></div>
-      <div class="adinfo" id="adInfo" hidden></div>
+      <button type="button" class="linkbtn2" id="adManual" hidden>Non lo trovi? Inseriscilo a mano</button>
     </div>
-    <div class="two">
-      <div class="grp"><label for="rCognome">Cognome</label><input class="inp" id="rCognome" autocomplete="off" autocapitalize="words"></div>
-      <div class="grp"><label for="rNome">Nome</label><input class="inp" id="rNome" autocomplete="off" autocapitalize="words"></div>
+    <div class="adbox" id="pManual" hidden>
+      <span class="glabel">Paziente non presente in AlfaDocs</span>
+      <div class="two">
+        <div class="grp"><label for="rCognome">Cognome</label><input class="inp" id="rCognome" autocomplete="off" autocapitalize="words"></div>
+        <div class="grp"><label for="rNome">Nome</label><input class="inp" id="rNome" autocomplete="off" autocapitalize="words"></div>
+      </div>
+      <div class="acts"><button class="btn primary" type="button" id="pManualOk">Continua</button><button class="btn" type="button" id="pManualBack">Torna alla ricerca</button></div>
     </div>
+    <div class="pcard" id="pCard" hidden>
+      <div><div class="pc-name" id="pcName"></div><div class="pc-sub" id="pcSub"></div></div>
+      <button class="btn sm" type="button" id="pcChange">Cambia</button>
+    </div>
+    <div id="rRest" hidden style="display:flex;flex-direction:column;gap:16px">
     <div class="grp"><label for="rData">Data intervento</label>
       <div class="daterow"><input class="inp" id="rData" type="date"><button type="button" class="toggle" id="rNoDate" aria-pressed="false">Da definire</button></div>
+      <p class="fieldnote" id="rDateNote" hidden></p>
     </div>
     <div class="grp"><span class="glabel">Sede dell'intervento</span><div class="picker" id="rSede"></div></div>
-    <div class="grp"><span class="glabel">Dottore</span><div class="picker" id="rDoc"></div></div>
+    <div class="grp"><span class="glabel">Dottore</span><div class="picker" id="rDoc"></div><p class="fieldnote" id="rDocNote" hidden></p></div>
+    <div class="grp"><span class="glabel">Denti da impiantare</span>
+      <div id="rTeeth"></div>
+      <p class="fieldnote" id="rTeethNote"></p>
+    </div>
     <div class="grp"><span class="glabel">Impianti per questo paziente</span>
       <div class="cart" id="rCart"></div>
     </div>
     <div class="grp"><span class="glabel">Marca</span><div class="picker" id="rLine"></div></div>
     <div class="grp"><span class="glabel">Misura: tocca per aggiungere</span><div class="picker" id="rSize"></div></div>
-    <div class="grp"><label for="rNote">Note</label><textarea class="inp" id="rNote" placeholder="Es. elementi 36 e 46, carico immediato"></textarea></div>
+    <div class="grp"><label for="rNote">Note</label><textarea class="inp" id="rNote" placeholder="Es. carico immediato, rialzo del seno"></textarea></div>
     <p class="err" id="rErr" hidden></p>
     <button class="btn primary block" type="submit" id="rSubmit">Salva prenotazione</button>
+    </div>
   </form>
 </dialog>
 
@@ -464,7 +510,7 @@ const S = { linee: new Map(), dottori: new Map(), stock: new Map(), prenotazioni
 const loaded = { linee: false, dottori: false, stock: false, prenotazioni: false, registro: false, accessi: false };
 const ui = { tab: "mag", line: "ALL", sede: "ALL", logQ: "", renaming: null, deleting: null };
 let openStock = null;
-const form = { editId: null, cart: new Map() }; // cart: stockId -> quantità
+const form = { editId: null, cart: new Map(), patient: null, teeth: new Set(), teethDone: new Set() }; // cart: stockId -> quantità
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const mm = n => String(n).replace(".", ",");
@@ -482,7 +528,7 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 // una prenotazione contiene un elenco di impianti (items); le prenotazioni vecchie ne avevano uno solo
 const itemsOf = r => Array.isArray(r.items) ? r.items : (r.stockId ? [{ stockId: r.stockId, lineId: r.lineId, linea: r.linea, d: r.d, l: r.l }] : []);
-const cleanRes = (r, items) => ({ nome: r.nome, cognome: r.cognome, data: r.data || "", sede: r.sede, dottoreId: r.dottoreId || "", dottore: r.dottore || "", note: r.note || "", createdAt: r.createdAt || new Date().toISOString(), createdBy: r.createdBy || userEmail, items });
+const cleanRes = (r, items) => ({ nome: r.nome, cognome: r.cognome, data: r.data || "", sede: r.sede, dottoreId: r.dottoreId || "", dottore: r.dottore || "", note: r.note || "", createdAt: r.createdAt || new Date().toISOString(), createdBy: r.createdBy || userEmail, denti: r.denti || [], alfadocs: r.alfadocs || null, items });
 
 function reservedFor(stockId, exceptResId) { let n = 0; for (const [id, r] of S.prenotazioni) if (id !== exceptResId) for (const it of itemsOf(r)) if (it.stockId === stockId) n++; return n; }
 function availFor(stockId, exceptResId) { const s = S.stock.get(stockId); return Math.max(0, (s ? s.qty || 0 : 0) - reservedFor(stockId, exceptResId)); }
@@ -586,7 +632,7 @@ function renderCart() {
     const s = S.stock.get(sid) || {};
     return `<div class="citem"><div class="nm">${itemLabel(s)}</div><div class="qty sm"><button type="button" data-cart="${esc(sid)}" data-d="-1" aria-label="Togli">−</button><span class="v">${n}</span><button type="button" data-cart="${esc(sid)}" data-d="1" aria-label="Aggiungi" ${formAvail(sid) <= 0 ? "disabled" : ""}>+</button></div></div>`;
   }).join("");
-  P.rLine.render(); P.rSize.render();
+  P.rLine.render(); P.rSize.render(); if ($("dlgRes").open) renderTeeth();
   const tot = [...form.cart.values()].reduce((a, b) => a + b, 0);
   $("rSubmit").textContent = form.editId ? "Salva modifiche" : tot > 1 ? `Salva prenotazione (${tot} impianti)` : "Salva prenotazione";
 }
@@ -654,6 +700,7 @@ function resCard(id, r) {
   return `<div class="rcard">
     <div class="who"><b>${esc(r.cognome)} ${esc(r.nome)}</b><span class="when">${fmtDate(r.data)}</span></div>
     <div class="meta"><span class="tag">${sedeName(r.sede)}</span><span class="tag">${esc(docName(r.dottoreId, r.dottore))}</span><span class="tag imp">${plural(items.length, "impianto", "impianti")}</span></div>
+    ${(r.denti || []).length ? `<div class="rteeth">${odoHTML(new Set(r.denti), new Set(), { mini: true })}<span>${r.denti.length === 1 ? "Dente" : "Denti"} ${esc(r.denti.join(", "))}</span></div>` : ""}
     <div class="items">${rows || `<p class="hint" style="padding:8px 0">Nessun impianto in questa prenotazione.</p>`}</div>
     ${r.note ? `<div class="note">${esc(r.note)}</div>` : ""}
     ${w ? `<div class="acts wrapit">
@@ -871,15 +918,50 @@ function setNoDate(on) {
   $("rData").disabled = on;
   if (on) $("rData").value = ""; else if (!$("rData").value) $("rData").value = todayISO();
 }
+const noteOut = (id, text) => { const el = $(id); el.textContent = text || ""; el.hidden = !text; };
+
+// Schema dentale (numerazione FDI): arcata superiore 18→11 | 21→28, inferiore 48→41 | 31→38
+const ARCH_UP = [[18, 17, 16, 15, 14, 13, 12, 11], [21, 22, 23, 24, 25, 26, 27, 28]];
+const ARCH_LO = [[48, 47, 46, 45, 44, 43, 42, 41], [31, 32, 33, 34, 35, 36, 37, 38]];
+function odoHTML(sel, done, opt = {}) {
+  const tooth = n => {
+    const on = sel.has(String(n)), dn = done.has(String(n)) && !on, molar = n % 10 >= 6;
+    const inner = on && opt.mini ? n : dn ? "✓" : "";
+    return opt.interactive
+      ? `<button type="button" class="tooth${dn ? " done" : ""}${molar ? "" : " m"}" data-tooth="${n}" aria-pressed="${on}" aria-label="Dente ${n}${dn ? ", già impiantato" : ""}"><i>${inner}</i>${n}</button>`
+      : `<span class="tooth${dn ? " done" : ""}${molar ? "" : " m"}" aria-pressed="${on}"><i>${inner}</i>${n}</span>`;
+  };
+  const row = (halves, cls) => `<div class="odo-row ${cls}">${halves[0].map(tooth).join("")}<span class="odo-mid"></span>${halves[1].map(tooth).join("")}</div>`;
+  return `<div class="odo${opt.mini ? " mini" : ""}" ${opt.mini ? 'aria-hidden="true"' : 'role="group" aria-label="Schema dentale"'}>${row(ARCH_UP, "up")}<div class="odo-sep"></div>${row(ARCH_LO, "low")}${opt.mini ? "" :
+    `<div class="odo-legend"><span><i style="background:var(--accent)"></i>Impianto da fare</span>${done.size ? `<span><i style="background:var(--line)"></i>Già impiantato</span>` : ""}</div>`}</div>`;
+}
+function renderTeeth() {
+  $("rTeeth").innerHTML = odoHTML(form.teeth, form.teethDone, { interactive: true });
+  const n = form.teeth.size, imp = [...form.cart.values()].reduce((a, b) => a + b, 0);
+  let t = n ? `${n === 1 ? "Dente" : "Denti"} ${[...form.teeth].sort((a, b) => a - b).join(", ")}.` : "Tocca i denti in cui va messo l'impianto.";
+  if (n && imp && n !== imp) t += ` Impianti scelti: ${imp}, denti segnati: ${n}.`;
+  $("rTeethNote").textContent = t;
+}
+function showPatient() {
+  const p = form.patient;
+  $("pSearch").hidden = !!p; $("pManual").hidden = true; $("pCard").hidden = !p; $("rRest").hidden = !p;
+  if (!p) return;
+  $("pcName").textContent = `${p.cognome} ${p.nome}`;
+  $("pcSub").innerHTML = p.alfadocs
+    ? `<span class="pc-src">AlfaDocs</span><span>${esc(sedeName(p.alfadocs.sede))}${p.birthYear ? " · nato nel " + esc(p.birthYear) : ""}</span>`
+    : `<span class="pc-src">Inserito a mano</span>`;
+}
 function openReserve(opts = {}) {
-  $("adLast").value = ""; $("adFirst").value = ""; $("adResults").innerHTML = ""; $("adInfo").hidden = true;
-  $("adBox").hidden = !!opts.editId;
   $("fRes").reset(); $("rErr").hidden = true;
-  form.editId = opts.editId || null; form.cart = new Map();
+  $("adLast").value = ""; $("adFirst").value = ""; $("adResults").innerHTML = ""; $("adManual").hidden = true;
+  noteOut("rDateNote"); noteOut("rDocNote");
+  form.editId = opts.editId || null; form.cart = new Map(); form.patient = null; form.teeth = new Set(); form.teethDone = new Set();
   resPickers().forEach(p => p.reset());
   if (form.editId) {
     const r = S.prenotazioni.get(form.editId);
-    $("rNome").value = r.nome || ""; $("rCognome").value = r.cognome || ""; $("rNote").value = r.note || "";
+    form.patient = { nome: r.nome || "", cognome: r.cognome || "", alfadocs: r.alfadocs || null };
+    form.teeth = new Set((r.denti || []).map(String));
+    $("rNote").value = r.note || "";
     $("rData").value = r.data || ""; setNoDate(!r.data);
     P.rSede.value = r.sede || null; P.rDoc.value = r.dottoreId || null;
     for (const it of itemsOf(r)) form.cart.set(it.stockId, (form.cart.get(it.stockId) || 0) + 1);
@@ -892,8 +974,9 @@ function openReserve(opts = {}) {
     if (opts.stockId) { const s = S.stock.get(opts.stockId); P.rLine.value = s.lineId; form.cart.set(opts.stockId, 1); }
     $("rKicker").textContent = "Prenotazione"; $("rTitle").textContent = "Riserva impianti";
   }
-  resPickers().forEach(p => p.render()); renderCart();
+  showPatient(); resPickers().forEach(p => p.render()); renderCart(); renderTeeth();
   $("dlgRes").showModal();
+  if (!form.patient) setTimeout(() => $("adLast").focus(), 50);
 }
 function openAdd() {
   $("fAdd").reset(); $("aErr").hidden = true; $("aQty").value = 1;
@@ -925,47 +1008,57 @@ function matchDoctor(opName) {
 }
 async function adSearch() {
   const last = $("adLast").value.trim(), first = $("adFirst").value.trim(), box = $("adResults");
-  $("adInfo").hidden = true;
   if (last.length < 2) { box.innerHTML = `<p class="hint">Scrivi il cognome completo.</p>`; return; }
   box.innerHTML = `<p class="hint">Cerco in AlfaDocs…</p>`;
   try {
     const r = await alfadocs("search", { lastName: last, firstName: first });
-    const missing = SEDI.filter(x => !(r.sedi || []).includes(x.id)).map(x => x.name);
-    const note = (missing.length ? `<p class="hint">Sedi non ancora collegate ad AlfaDocs: ${missing.join(", ")}.</p>` : "") +
-      ((r.errors || []).length ? `<p class="err">Non ho potuto cercare a ${r.errors.map(sedeName).join(", ")}: riprova tra poco.</p>` : "");
-    if (!r.results.length) { box.innerHTML = `<p class="hint">Nessun paziente trovato. AlfaDocs cerca il cognome intero: controlla come è scritto.</p>` + note; return; }
-    box.innerHTML = r.results.map(p => `<button type="button" data-adp="${esc(p.sede)}:${esc(p.id)}"><span>${esc(cap(p.lastName))} ${esc(cap(p.firstName))}</span><small>${esc(sedeName(p.sede))}${p.birthYear ? " · nato nel " + esc(p.birthYear) : ""}</small></button>`).join("") +
-      (r.total > r.results.length ? `<p class="hint">Mostro ${r.results.length} di ${r.total}: aggiungi il nome per restringere.</p>` : "") + note;
-  } catch (e) { box.innerHTML = `<p class="err">AlfaDocs non risponde. Riprova tra poco o compila a mano.</p>`; }
+    const failed = r.errors || [];
+    const note = failed.length ? `<p class="hint">Ricerca non riuscita a ${failed.map(sedeName).join(", ")}.</p>` : "";
+    box.innerHTML = r.results.length
+      ? r.results.map(p => `<button type="button" data-adp="${esc(p.sede)}:${esc(p.id)}" data-by="${esc(p.birthYear)}"><span>${esc(cap(p.lastName))} ${esc(cap(p.firstName))}</span><small>${esc(sedeName(p.sede))}${p.birthYear ? " · nato nel " + esc(p.birthYear) : ""}</small></button>`).join("") +
+        (r.total > r.results.length ? `<p class="hint">Mostro ${r.results.length} di ${r.total}: aggiungi il nome per restringere.</p>` : "") + note
+      : `<p class="hint">Nessun paziente con questo cognome. AlfaDocs cerca il cognome intero: controlla come è scritto.</p>` + note;
+  } catch (e) { box.innerHTML = `<p class="hint">AlfaDocs non risponde in questo momento. Riprova tra poco.</p>`; }
+  $("adManual").hidden = false;
 }
-async function adPick(ref) {
+async function adPick(ref, birthYear) {
   const [sede, id] = String(ref).split(":");
-  const box = $("adResults"), info = $("adInfo");
+  const box = $("adResults");
   box.innerHTML = `<p class="hint">Leggo piano di cura e agenda…</p>`;
   try {
     const d = await alfadocs("patient", { sede, patientId: id });
-    box.innerHTML = "";
-    $("rCognome").value = cap(d.patient.lastName); $("rNome").value = cap(d.patient.firstName);
-    const na = d.nextAppointment;
-    if (na) { setNoDate(false); $("rData").value = na.date; } else setNoDate(true);
+    form.patient = { nome: cap(d.patient.firstName), cognome: cap(d.patient.lastName), birthYear, alfadocs: { sede: d.sede, id: Number(id) } };
     P.rSede.value = d.sede;
-    const doc = na ? matchDoctor(na.operator) : null; if (doc) P.rDoc.value = doc;
-    const todo = d.teeth.filter(t => !t.done).map(t => t.tooth);
-    if (todo.length && !$("rNote").value.trim()) $("rNote").value = (todo.length === 1 ? "Dente " : "Denti ") + todo.join(", ");
-    resPickers().forEach(p => p.render());
-    info.innerHTML = `<div>${todo.length ? `<b>Impianti da fare: ${todo.length}</b> · ${todo.length === 1 ? "dente" : "denti"} ${esc(todo.join(", "))}` : "<b>Nessun impianto da fare</b> nel piano di cura"}</div>` +
-      (na ? `<div>Prossimo appuntamento a ${esc(sedeName(d.sede))}: ${esc(fmtDate(na.date, true))}${na.operator ? " · " + esc(na.operator) : ""}</div>` : `<div>Nessun appuntamento nei prossimi 90 giorni a ${esc(sedeName(d.sede))}: data “da definire”.</div>`) +
-      (na && na.operator && !doc ? `<div class="err" style="font-size:13px">Dottore “${esc(na.operator)}” non presente in Elenchi: sceglilo o aggiungilo.</div>` : "") +
-      (todo.length ? `<div class="hint">Ora scegli marca e misura: ${todo.length === 1 ? "un impianto" : todo.length + " impianti"}.</div>` : "");
-    info.hidden = false;
-  } catch (e) { box.innerHTML = `<p class="err">Non riesco a leggere i dati del paziente da AlfaDocs. Riprova o compila a mano.</p>`; }
+    const na = d.nextAppointment;
+    if (na) { setNoDate(false); $("rData").value = na.date; noteOut("rDateNote", "Dall'agenda AlfaDocs" + (na.operator ? ` · ${na.operator}` : "")); }
+    else { setNoDate(true); noteOut("rDateNote", "Nessun appuntamento in agenda nei prossimi 90 giorni."); }
+    const doc = na ? matchDoctor(na.operator) : null;
+    if (doc) { P.rDoc.value = doc; noteOut("rDocNote"); }
+    else noteOut("rDocNote", na && na.operator ? `In agenda: ${na.operator}. Sceglilo qui sopra o aggiungilo.` : "");
+    form.teeth = new Set(d.teeth.filter(t => !t.done).map(t => String(t.tooth)));
+    form.teethDone = new Set(d.teeth.filter(t => t.done).map(t => String(t.tooth)));
+    box.innerHTML = "";
+    showPatient(); resPickers().forEach(p => p.render()); renderTeeth();
+  } catch (e) { box.innerHTML = `<p class="hint">Non riesco a leggere i dati del paziente da AlfaDocs. Riprova tra poco.</p>`; }
 }
+$("adManual").addEventListener("click", () => { $("pSearch").hidden = true; $("pManual").hidden = false; $("rCognome").value = cap($("adLast").value.trim()); $("rNome").value = cap($("adFirst").value.trim()); $("rCognome").focus(); });
+$("pManualBack").addEventListener("click", () => { $("pManual").hidden = true; $("pSearch").hidden = false; });
+$("pManualOk").addEventListener("click", () => {
+  const cognome = $("rCognome").value.trim(), nome = $("rNome").value.trim();
+  if (!cognome || !nome) { $("rErr").textContent = "Scrivi cognome e nome del paziente."; $("rErr").hidden = false; return; }
+  $("rErr").hidden = true;
+  form.patient = { nome: cap(nome), cognome: cap(cognome), alfadocs: null };
+  noteOut("rDateNote"); noteOut("rDocNote"); form.teethDone = new Set();
+  showPatient(); renderTeeth();
+});
+$("pcChange").addEventListener("click", () => { form.patient = null; $("adResults").innerHTML = ""; $("adManual").hidden = true; showPatient(); $("adLast").focus(); });
+$("rTeeth").addEventListener("click", e => { const b = e.target.closest("[data-tooth]"); if (!b) return; const n = b.dataset.tooth; if (form.teeth.has(n)) form.teeth.delete(n); else form.teeth.add(n); renderTeeth(); });
 $("adGo").addEventListener("click", adSearch);
 $("adLast").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); adSearch(); } });
 $("adFirst").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); adSearch(); } });
-$("adResults").addEventListener("click", e => { const b = e.target.closest("[data-adp]"); if (b) adPick(b.dataset.adp); });
+$("adResults").addEventListener("click", e => { const b = e.target.closest("[data-adp]"); if (b) adPick(b.dataset.adp, b.dataset.by); });
 
-$("rNoDate").addEventListener("click", () => setNoDate($("rNoDate").getAttribute("aria-pressed") !== "true"));
+$("rNoDate").addEventListener("click", () => { setNoDate($("rNoDate").getAttribute("aria-pressed") !== "true"); noteOut("rDateNote"); });
 $("logQ").addEventListener("input", e => { ui.logQ = e.target.value; renderLog(); });
 document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-close]")) d.close(); }));
 $("dlgSize").addEventListener("close", () => { openStock = null; });
@@ -1015,9 +1108,9 @@ $("fRes").addEventListener("submit", async e => {
   e.preventDefault();
   const err = $("rErr"); err.hidden = true;
   const fail = m => { err.textContent = m; err.hidden = false; };
-  const nome = $("rNome").value.trim(), cognome = $("rCognome").value.trim();
+  if (!form.patient) return fail("Cerca il paziente in AlfaDocs, oppure inseriscilo a mano se non c'è.");
+  const { nome, cognome } = form.patient;
   const noDate = $("rNoDate").getAttribute("aria-pressed") === "true";
-  if (!cognome || !nome) return fail("Inserisci cognome e nome del paziente.");
   if (!noDate && !$("rData").value) return fail("Scegli la data dell'intervento, oppure tocca “Da definire”.");
   if (!P.rSede.value) return fail("Scegli la sede dell'intervento.");
   if (!P.rDoc.value) return fail("Scegli il dottore, oppure aggiungilo con “+ Nuovo dottore”.");
@@ -1029,7 +1122,7 @@ $("fRes").addEventListener("submit", async e => {
     for (let i = 0; i < n; i++) items.push({ stockId: sid, lineId: s.lineId, linea: lineName(s.lineId), d: s.d, l: s.l });
   }
   const old = form.editId ? S.prenotazioni.get(form.editId) : null;
-  const doc = cleanRes({ nome, cognome, data: noDate ? "" : $("rData").value, sede: P.rSede.value, dottoreId: P.rDoc.value, dottore: docName(P.rDoc.value), note: $("rNote").value.trim(), createdAt: old?.createdAt, createdBy: old?.createdBy }, items);
+  const doc = cleanRes({ nome, cognome, data: noDate ? "" : $("rData").value, sede: P.rSede.value, dottoreId: P.rDoc.value, dottore: docName(P.rDoc.value), note: $("rNote").value.trim(), createdAt: old?.createdAt, createdBy: old?.createdBy, denti: [...form.teeth].sort((a, b) => a - b), alfadocs: form.patient.alfadocs }, items);
   try {
     await DB.set("prenotazioni", form.editId || newId("p"), doc);
     save("doc", P.rDoc.value);

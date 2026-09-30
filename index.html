@@ -204,6 +204,15 @@ textarea.inp { min-height: 64px; resize: vertical; }
 .err { color: var(--bad); font-size: 14px; font-weight: 600; margin: 0; }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
 
+.adbox { background: var(--accent-soft); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.adrow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
+.adrow > * { min-width: 0; }
+@media (max-width: 460px) { .adrow { grid-template-columns: 1fr 1fr; } .adrow .btn { grid-column: 1 / -1; } }
+.adres { display: flex; flex-direction: column; gap: 6px; }
+.adres button { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; font-weight: 700; display: flex; justify-content: space-between; gap: 10px; }
+.adres button small { color: var(--muted); font-weight: 600; }
+.adinfo { background: var(--surface); border-radius: 12px; padding: 10px 12px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.adinfo b { font-weight: 800; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; z-index: 50; max-width: calc(100% - 32px); text-align: center; }
 .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -356,6 +365,16 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
     <div class="sheet-head">
       <div><div class="kicker" id="rKicker">Prenotazione</div><h2 id="rTitle">Riserva impianti</h2></div>
       <button class="close" type="button" data-close aria-label="Chiudi">✕</button>
+    </div>
+    <div class="adbox" id="adBox">
+      <span class="glabel">Cerca il paziente in AlfaDocs</span>
+      <div class="adrow">
+        <input class="inp" id="adLast" placeholder="Cognome completo" autocomplete="off" autocapitalize="words">
+        <input class="inp" id="adFirst" placeholder="Nome (facoltativo)" autocomplete="off" autocapitalize="words">
+        <button class="btn primary" type="button" id="adGo">Cerca</button>
+      </div>
+      <div class="adres" id="adResults"></div>
+      <div class="adinfo" id="adInfo" hidden></div>
     </div>
     <div class="two">
       <div class="grp"><label for="rCognome">Cognome</label><input class="inp" id="rCognome" autocomplete="off" autocapitalize="words"></div>
@@ -853,6 +872,8 @@ function setNoDate(on) {
   if (on) $("rData").value = ""; else if (!$("rData").value) $("rData").value = todayISO();
 }
 function openReserve(opts = {}) {
+  $("adLast").value = ""; $("adFirst").value = ""; $("adResults").innerHTML = ""; $("adInfo").hidden = true;
+  $("adBox").hidden = !!opts.editId;
   $("fRes").reset(); $("rErr").hidden = true;
   form.editId = opts.editId || null; form.cart = new Map();
   resPickers().forEach(p => p.reset());
@@ -888,6 +909,59 @@ document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("cl
 $("homeHelp").addEventListener("click", () => $("dlgHome").showModal());
 $("btnReserve").addEventListener("click", () => openReserve());
 $("btnAdd").addEventListener("click", openAdd);
+/* ---------- AlfaDocs (sola lettura) ---------- */
+async function alfadocs(action, params) {
+  const { data, error } = await sb.functions.invoke("alfadocs", { body: { action, params } });
+  if (error) throw error;
+  return data;
+}
+const cap = s => String(s || "").toLowerCase().replace(/(^|[\s'-])\S/g, c => c.toUpperCase());
+const tokens = s => String(s || "").toLowerCase().replace(/dott\.?(ssa)?|dr\.?/g, " ").split(/[^a-zà-ú]+/).filter(t => t.length > 1);
+function matchDoctor(opName) {
+  const t = tokens(opName); if (!t.length) return null;
+  let best = null, bestScore = 0;
+  for (const [id, v] of S.dottori) { const d = tokens(v.name); const score = t.filter(x => d.includes(x)).length; if (score > bestScore) { best = id; bestScore = score; } }
+  return bestScore >= Math.min(2, t.length) ? best : null;
+}
+async function adSearch() {
+  const last = $("adLast").value.trim(), first = $("adFirst").value.trim(), box = $("adResults");
+  $("adInfo").hidden = true;
+  if (last.length < 2) { box.innerHTML = `<p class="hint">Scrivi il cognome completo.</p>`; return; }
+  box.innerHTML = `<p class="hint">Cerco in AlfaDocs…</p>`;
+  try {
+    const r = await alfadocs("search", { lastName: last, firstName: first });
+    if (!r.results.length) { box.innerHTML = `<p class="hint">Nessun paziente trovato. AlfaDocs cerca il cognome intero: controlla come è scritto.</p>`; return; }
+    box.innerHTML = r.results.map(p => `<button type="button" data-adp="${esc(p.id)}">${esc(cap(p.lastName))} ${esc(cap(p.firstName))}<small>${p.birthYear ? "nato nel " + esc(p.birthYear) : ""}</small></button>`).join("") +
+      (r.total > r.results.length ? `<p class="hint">Mostro ${r.results.length} di ${r.total}: aggiungi il nome per restringere.</p>` : "");
+  } catch (e) { box.innerHTML = `<p class="err">AlfaDocs non risponde. Riprova tra poco o compila a mano.</p>`; }
+}
+async function adPick(id) {
+  const box = $("adResults"), info = $("adInfo");
+  box.innerHTML = `<p class="hint">Leggo piano di cura e agenda…</p>`;
+  try {
+    const d = await alfadocs("patient", { patientId: id });
+    box.innerHTML = "";
+    $("rCognome").value = cap(d.patient.lastName); $("rNome").value = cap(d.patient.firstName);
+    const na = d.nextAppointment;
+    if (na) { setNoDate(false); $("rData").value = na.date; } else setNoDate(true);
+    if (na && na.sede) P.rSede.value = na.sede;
+    const doc = na ? matchDoctor(na.operator) : null; if (doc) P.rDoc.value = doc;
+    const todo = d.teeth.filter(t => !t.done).map(t => t.tooth);
+    if (todo.length && !$("rNote").value.trim()) $("rNote").value = (todo.length === 1 ? "Dente " : "Denti ") + todo.join(", ");
+    resPickers().forEach(p => p.render());
+    info.innerHTML = `<div>${todo.length ? `<b>Impianti da fare: ${todo.length}</b> · ${todo.length === 1 ? "dente" : "denti"} ${esc(todo.join(", "))}` : "<b>Nessun impianto da fare</b> nel piano di cura"}</div>` +
+      (na ? `<div>Prossimo appuntamento: ${esc(fmtDate(na.date, true))} · ${esc(na.chair || "poltrona non indicata")}${na.operator ? " · " + esc(na.operator) : ""}</div>` : `<div>Nessun appuntamento nei prossimi 90 giorni: data “da definire”.</div>`) +
+      (na && !na.sede ? `<div class="err" style="font-size:13px">Sede non riconosciuta dalla poltrona: sceglila qui sotto.</div>` : "") +
+      (na && na.operator && !doc ? `<div class="err" style="font-size:13px">Dottore “${esc(na.operator)}” non presente in Elenchi: sceglilo o aggiungilo.</div>` : "") +
+      (todo.length ? `<div class="hint">Ora scegli marca e misura: ${todo.length === 1 ? "un impianto" : todo.length + " impianti"}.</div>` : "");
+    info.hidden = false;
+  } catch (e) { box.innerHTML = `<p class="err">Non riesco a leggere i dati del paziente da AlfaDocs. Riprova o compila a mano.</p>`; }
+}
+$("adGo").addEventListener("click", adSearch);
+$("adLast").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); adSearch(); } });
+$("adFirst").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); adSearch(); } });
+$("adResults").addEventListener("click", e => { const b = e.target.closest("[data-adp]"); if (b) adPick(b.dataset.adp); });
+
 $("rNoDate").addEventListener("click", () => setNoDate($("rNoDate").getAttribute("aria-pressed") !== "true"));
 $("logQ").addEventListener("input", e => { ui.logQ = e.target.value; renderLog(); });
 document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-close]")) d.close(); }));

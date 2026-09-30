@@ -25,7 +25,7 @@ class AlfaError extends Error {
 
 // Unica funzione che parla con AlfaDocs: solo GET.
 async function get(sede: string, path: string, params: Record<string, string | number> = {}) {
-  const key = KEYS[sede];
+  const key = (KEYS[sede] ?? "").trim();
   if (!key) throw new AlfaError(400, `Sede ${sede} non collegata`);
   const url = new URL(BASE + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));

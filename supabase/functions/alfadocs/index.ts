@@ -1,14 +1,14 @@
 // Ponte in SOLA LETTURA verso AlfaDocs.
-// Ogni sede è uno studio AlfaDocs separato, con la sua chiave (segreti ALFADOCS_KEY_BO / _FA / _RN;
-// la prima chiave creata, ALFADOCS_API_KEY, è quella di Faenza). Le chiavi non arrivano mai ai telefoni.
+// Ogni sede è uno studio AlfaDocs separato, con la sua chiave: ALFADOCS_API_KEY (Faenza),
+// ALFADOCS_API_KEY-BOLOGNA, ALFADOCS_API_KEY-RIMINI. Le chiavi non arrivano mai ai telefoni.
 // Risponde solo agli utenti dell'app presenti nella tabella "accessi".
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const BASE = "https://app.alfadocs.com/api/v1";
 const KEYS: Record<string, string> = {
-  BO: Deno.env.get("ALFADOCS_KEY_BO") ?? "",
+  BO: Deno.env.get("ALFADOCS_KEY_BO") ?? Deno.env.get("ALFADOCS_API_KEY-BOLOGNA") ?? "",
   FA: Deno.env.get("ALFADOCS_KEY_FA") ?? Deno.env.get("ALFADOCS_API_KEY") ?? "",
-  RN: Deno.env.get("ALFADOCS_KEY_RN") ?? "",
+  RN: Deno.env.get("ALFADOCS_KEY_RN") ?? Deno.env.get("ALFADOCS_API_KEY-RIMINI") ?? "",
 };
 const SEDI = Object.keys(KEYS).filter((s) => KEYS[s]);
 const cors = {

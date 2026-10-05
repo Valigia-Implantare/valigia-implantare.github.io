@@ -305,7 +305,8 @@ table.cg td .void { display: block; min-width: 44px; height: 36px; border-radius
 .qbtn[aria-pressed="true"] { background: var(--warn-bg); border-color: var(--warn); }
 .ordcard { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
 .ordcard h2 { margin: 0; font-size: 18px; font-weight: 800; }
-.ordcard .oline { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.ordcard .oline { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.ordcard .oline .acts { align-items: center; }
 .ordcard .oline b { font-family: var(--f-num); }
 .ordbox { background: var(--surface-2); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .ordbox .orow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
@@ -493,7 +494,8 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
       <div class="qty"><button type="button" id="aMinus" aria-label="Meno">−</button><input id="aQty" inputmode="numeric" value="1" aria-label="Quantità"><button type="button" id="aPlus" aria-label="Più">+</button></div>
     </div>
     <p class="err" id="aErr" hidden></p>
-    <button class="btn primary block" type="submit">Aggiungi</button>
+    <button class="btn primary block" type="submit">Aggiungi alla valigia</button>
+    <button class="btn block" type="button" id="aOrder">Non c'è: segna da ordinare</button>
   </form>
 </dialog>
 
@@ -779,7 +781,7 @@ function renderAddCatalog() {
   }, "pick");
 }
 
-const needsOrder = sid => { const s = S.stock.get(sid); return !!s && S.linee.has(s.lineId) && (!availFor(sid) || !!s.riordino); };
+const needsOrder = sid => { const s = S.stock.get(sid); return !!s && S.linee.has(s.lineId) && !!s.riordino; };
 function orderTag(s) {
   if (s.riordino === "da_ordinare") return `<span class="otag">da ordinare ×${s.riordinoQty || 1}</span>`;
   if (s.riordino === "ordinato") return `<span class="otag done">ordinato ×${s.riordinoQty || 1}</span>`;
@@ -787,12 +789,20 @@ function orderTag(s) {
 }
 function orderListHTML() {
   const flagged = [...S.stock.entries()].filter(([, s]) => s.riordino && S.linee.has(s.lineId));
+  const w = canWrite && db;
   const block = (state, title) => {
     const rows = flagged.filter(([, s]) => s.riordino === state).sort(([, a], [, b]) => byName(lineName(a.lineId), lineName(b.lineId)) || a.d - b.d || a.l - b.l);
-    return rows.length ? `<span class="glabel">${title}</span>` + rows.map(([, s]) => `<div class="oline"><span>${esc(lineName(s.lineId))} <span class="num">Ø ${mm(s.d)} × ${mm(s.l)}</span></span><b>×${s.riordinoQty || 1}</b></div>`).join("") : "";
+    if (!rows.length) return "";
+    return `<span class="glabel">${title}</span>` + rows.map(([sid, s]) => `<div class="oline">
+      <span>${esc(lineName(s.lineId))} <span class="num">Ø ${mm(s.d)} × ${mm(s.l)}</span><small class="fieldnote" style="display:block">${state === "ordinato" ? "Ordinato il " + esc(fmtDate(s.riordinoAt, true)) : `In valigia: ${s.qty || 0}`}</small></span>
+      ${w ? `<span class="acts">${state === "da_ordinare"
+        ? `<span class="qty sm"><button type="button" data-ord="minus" data-sid="${esc(sid)}" aria-label="Meno">−</button><span class="v">${s.riordinoQty || 1}</span><button type="button" data-ord="plus" data-sid="${esc(sid)}" aria-label="Più">+</button></span><button class="btn sm primary" type="button" data-ord="ordered" data-sid="${esc(sid)}">Ordinato</button>`
+        : `<b>×${s.riordinoQty || 1}</b><button class="btn sm primary" type="button" data-ord="arrived" data-sid="${esc(sid)}">Arrivato</button>`}
+        <button class="btn sm" type="button" data-ord="clear" data-sid="${esc(sid)}" aria-label="Togli dalla lista">✕</button></span>` : `<b>×${s.riordinoQty || 1}</b>`}
+    </div>`).join("");
   };
   const a = block("da_ordinare", "Da ordinare"), b = block("ordinato", "Ordinati, in arrivo");
-  return `<div class="ordcard"><h2>Lista d'ordine</h2>${a || b ? a + b : `<p class="hint">Nessuna misura segnata. Tocca “Ordina” accanto a una misura, oppure aprila e scegli la quantità.</p>`}</div>`;
+  return `<div class="ordcard"><h2>Lista d'ordine</h2>${a || b ? a + b : `<p class="hint">Nessuna misura da ordinare. Per aggiungerne una, nella Valigia tocca la misura e premi “Segna da ordinare”, oppure usa “Carica” e scegli “Segna da ordinare”.</p>`}</div>`;
 }
 function renderOrder() {
   const s = S.stock.get(openStock), box = $("szOrder"); if (!s) return;
@@ -832,6 +842,7 @@ async function orderAction(act, sid, vsize) {
     await DB.update("stock", id, patch);
     if (act === "arrived") toast(`+${n} ${lineName(s.lineId)} Ø ${mm(s.d)} × ${mm(s.l)} in valigia`);
     if (act === "mark" || (act === "quick" && !s.riordino)) toast("Aggiunto alla lista d'ordine");
+    if (act === "ordered") toast("Segnato come ordinato");
   } catch (e) { toast(dbErr(e)); }
 }
 
@@ -856,7 +867,8 @@ function renderMag() {
     box.innerHTML = `<div class="empty"><h2>La valigia è vuota</h2><p>Tocca <b>Carica</b> in alto: scegli o crea la marca (per esempio “Straumann BLT”), scrivi diametro, lunghezza e quantità. Marche e dottori si gestiscono anche dalla scheda <b>Elenchi</b>.</p></div>`;
     return;
   }
-  let html = ui.line === "ZERO" ? orderListHTML() : "";
+  if (ui.line === "ZERO") { box.innerHTML = orderListHTML(); return; }
+  let html = "";
   for (const l of lines) {
     if (ui.line !== "ALL" && ui.line !== "ZERO" && ui.line !== l.id) continue;
     const sizes = viewSizes(l.id);
@@ -1366,6 +1378,20 @@ $("dlgCat").addEventListener("close", () => { if ($("dlgAdd").open) renderKnown(
 $("aCat").addEventListener("click", e => { const b = e.target.closest("[data-addcell]"); if (!b) return; addSel.key = b.dataset.addcell; const [d, l] = addSel.key.split("x").map(Number); $("aDia").value = mm(d); $("aLen").value = mm(l); renderKnown(); });
 $("aManualShow").addEventListener("click", () => { addSel.manual = true; addSel.key = null; $("aDia").value = ""; $("aLen").value = ""; renderKnown(); $("aDia").focus(); });
 $("aCatSet").addEventListener("click", () => { if (P.aLine.value) openCatalog(P.aLine.value); });
+$("aOrder").addEventListener("click", async () => {
+  const err = $("aErr"); err.hidden = true;
+  const fail = m => { err.textContent = m; err.hidden = false; };
+  const lineId = P.aLine.value, d = parseMm($("aDia").value), l = parseMm($("aLen").value), n = Math.max(1, parseInt($("aQty").value, 10) || 1);
+  if (!lineId) return fail("Scegli la marca.");
+  if (!(d > 0 && l > 0)) return fail("Scegli la misura da ordinare.");
+  const id = stockKey(lineId, d, l), s = S.stock.get(id), now = new Date().toISOString();
+  try {
+    if (s) await DB.update("stock", id, { riordino: "da_ordinare", riordinoQty: n, riordinoAt: now });
+    else await DB.set("stock", id, { lineId, d, l, qty: 0, riordino: "da_ordinare", riordinoQty: n, riordinoAt: now, updatedAt: now });
+    toast(`Da ordinare: ${n} × ${lineName(lineId)} Ø ${mm(d)} × ${mm(l)}`);
+    $("aDia").value = ""; $("aLen").value = ""; $("aQty").value = 1; addSel.key = null; addSel.manual = false; renderKnown();
+  } catch (ex) { fail(dbErr(ex)); }
+});
 $("aMinus").addEventListener("click", () => { $("aQty").value = Math.max(1, (parseInt($("aQty").value, 10) || 1) - 1); });
 $("aPlus").addEventListener("click", () => { $("aQty").value = (parseInt($("aQty").value, 10) || 0) + 1; });
 $("fAdd").addEventListener("submit", async e => {
@@ -1458,7 +1484,7 @@ window.addEventListener("online", resync);
 setInterval(() => { if (!document.hidden) resync(); }, 60000);
 
 /* ---------- aggiornamenti: l'app dalla Home può tenere una versione vecchia ---------- */
-const BUILD = "2026-10-05b";
+const BUILD = "2026-10-05c";
 async function checkVersion() {
   try {
     const v = (await (await fetch("version.txt?t=" + Date.now(), { cache: "no-store" })).text()).trim();

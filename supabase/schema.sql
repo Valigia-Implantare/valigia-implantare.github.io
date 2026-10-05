@@ -123,3 +123,6 @@ alter table public.prenotazioni add column if not exists alfadocs jsonb;
 alter table public.stock add column if not exists riordino text not null default '';
 alter table public.stock add column if not exists riordino_qty integer not null default 0;
 alter table public.stock add column if not exists riordino_at timestamptz;
+
+-- Catalogo delle misure di ogni marca: {"diametri": [..], "lunghezze": [..], "misure": ["3.5x10", ...]}
+alter table public.linee add column if not exists catalogo jsonb not null default '{}'::jsonb;

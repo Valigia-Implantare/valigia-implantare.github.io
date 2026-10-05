@@ -235,6 +235,23 @@ button.tooth { cursor: pointer; }
 .rteeth { display: grid; grid-template-columns: minmax(0, 220px) 1fr; gap: 12px; align-items: center; }
 .rteeth span { font-size: 14px; font-weight: 700; }
 @media (max-width: 420px) { .rteeth { grid-template-columns: 1fr; } }
+.cgwrap { overflow-x: auto; margin-inline: -4px; padding: 2px 4px 4px; }
+table.cg { border-collapse: separate; border-spacing: 4px; font-family: var(--f-num); font-size: 12px; }
+table.cg th { color: var(--muted); font-weight: 700; padding: 0 2px; text-align: center; white-space: nowrap; }
+table.cg th.rh { text-align: right; padding-right: 6px; }
+table.cg td { padding: 0; }
+table.cg td button { min-width: 44px; height: 36px; border-radius: 9px; border: 1.5px solid var(--line); background: var(--surface); font-family: var(--f-num); font-size: 12px; font-weight: 700; color: var(--muted); padding: 0 6px; }
+table.cg td button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+table.cg.pick td button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+table.cg td .void { display: block; min-width: 44px; height: 36px; border-radius: 9px; background: repeating-linear-gradient(135deg, transparent 0 5px, var(--line) 5px 6px); opacity: .6; }
+.chipsx { display: flex; flex-wrap: wrap; gap: 6px; }
+.chipx { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 5px 6px 5px 10px; font-family: var(--f-num); font-weight: 700; font-size: 13px; }
+.chipx button { border: 0; background: var(--surface-2); border-radius: 6px; width: 22px; height: 22px; color: var(--muted); font-size: 12px; }
+.inrow { display: flex; gap: 8px; }
+.inrow .inp { flex: 1; min-width: 0; }
+.srow.missing .size { color: var(--muted); font-weight: 500; }
+.pill.none { background: var(--surface-2); color: var(--muted); }
+.lhead .catlink { border: 0; background: none; color: var(--accent); font-weight: 700; font-size: 13px; padding: 0; margin-left: 8px; }
 .adbox { background: var(--accent-soft); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .adrow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
 .adrow > * { min-width: 0; }
@@ -464,8 +481,11 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
       <button class="close" type="button" data-close aria-label="Chiudi">✕</button>
     </div>
     <div class="grp"><span class="glabel">Marca</span><div class="picker" id="aLine"></div></div>
-    <div class="grp" id="aKnownGrp" hidden><span class="glabel">Misure già presenti</span><div class="picker" id="aKnown"></div><p class="hint">Tocca una misura per ricaricarla, oppure scrivine una nuova qui sotto.</p></div>
-    <div class="two">
+    <div class="grp" id="aCatGrp" hidden><span class="glabel">Misura · tocca per sceglierla</span><div class="cgwrap" id="aCat"></div>
+      <p class="fieldnote">Il numero è quanti ce ne sono già in valigia. Le caselle a righe sono misure che questa marca non produce.</p>
+      <button type="button" class="linkbtn2" id="aManualShow">Misura non in elenco? Scrivila</button></div>
+    <div class="grp" id="aCatEmpty" hidden><p class="fieldnote">Le misure di questa marca non sono ancora impostate. <button type="button" class="linkbtn2" id="aCatSet">Imposta le misure della marca</button></p></div>
+    <div class="two" id="aManual">
       <div class="grp"><label for="aDia">Diametro (mm)</label><input class="inp num" id="aDia" type="text" inputmode="decimal" placeholder="4,1" autocomplete="off"></div>
       <div class="grp"><label for="aLen">Lunghezza (mm)</label><input class="inp num" id="aLen" type="text" inputmode="decimal" placeholder="10" autocomplete="off"></div>
     </div>
@@ -475,6 +495,26 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
     <p class="err" id="aErr" hidden></p>
     <button class="btn primary block" type="submit">Aggiungi</button>
   </form>
+</dialog>
+
+<!-- Catalogo misure della marca -->
+<dialog id="dlgCat">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><div class="kicker">Misure della marca</div><h2 id="catTitle"></h2></div>
+      <button class="close" type="button" data-close aria-label="Chiudi">✕</button>
+    </div>
+    <p class="hint" style="margin:0">Scrivi i diametri e le lunghezze che esistono per questa marca, poi spegni nella griglia le combinazioni che non esistono.</p>
+    <div class="grp"><span class="glabel">Diametri (mm)</span><div class="chipsx" id="catD"></div>
+      <div class="inrow"><input class="inp num" id="catDIn" inputmode="decimal" placeholder="Es. 3,5 4,1 4,8" autocomplete="off"><button class="btn" type="button" id="catDAdd">Aggiungi</button></div></div>
+    <div class="grp"><span class="glabel">Lunghezze (mm)</span><div class="chipsx" id="catL"></div>
+      <div class="inrow"><input class="inp num" id="catLIn" inputmode="decimal" placeholder="Es. 8 10 12 14" autocomplete="off"><button class="btn" type="button" id="catLAdd">Aggiungi</button></div></div>
+    <div class="grp"><span class="glabel">Misure esistenti</span><div class="cgwrap" id="catGrid"></div>
+      <div class="acts"><button class="btn sm" type="button" id="catAll">Tutte</button><button class="btn sm" type="button" id="catNone">Nessuna</button></div>
+      <p class="fieldnote" id="catCount"></p></div>
+    <p class="err" id="catErr" hidden></p>
+    <button class="btn primary block" type="button" id="catSave">Salva misure</button>
+  </div>
 </dialog>
 
 <!-- Dettaglio misura -->
@@ -632,13 +672,16 @@ const P = {
     empty: () => P.rLine.value ? "Nessuna misura caricata per questa marca." : "Scegli prima la marca.",
     onChange: sid => { if (formAvail(sid) <= 0) return; form.cart.set(sid, (form.cart.get(sid) || 0) + 1); renderCart(); } }),
   aLine: new Picker($("aLine"), { kind: "linee", addLabel: "Nuova marca", placeholder: "Es. Straumann BLT",
-    items: () => lineItems(false), empty: () => "Crea la prima marca.", onChange: () => renderKnown() }),
-  aKnown: new Picker($("aKnown"), { mono: true,
-    items: () => P.aLine.value ? sizesOf(P.aLine.value).map(([sid, s]) => ({ id: sid, label: `Ø ${mm(s.d)} × ${mm(s.l)}`, sub: `${s.qty || 0} in valigia` })) : [],
-    onChange: sid => { const s = S.stock.get(sid); if (s) { $("aDia").value = mm(s.d); $("aLen").value = mm(s.l); } } }),
+    items: () => lineItems(false), empty: () => "Crea la prima marca.", onChange: () => { addSel.key = null; addSel.manual = false; $("aDia").value = ""; $("aLen").value = ""; renderKnown(); } }),
+
 };
 const resPickers = () => [P.rSede, P.rDoc, P.rLine, P.rSize];
-function renderKnown() { P.aKnown.value = null; P.aKnown.render(); $("aKnownGrp").hidden = !(P.aLine.value && sizesOf(P.aLine.value).length); }
+function renderKnown() {
+  renderAddCatalog();
+  const has = !$("aCatGrp").hidden;
+  $("aManual").hidden = has && !addSel.manual;
+  $("aManualShow").hidden = !has || !!addSel.manual;
+}
 
 function renderCart() {
   const box = $("rCart");
@@ -661,8 +704,79 @@ function render() {
   $("resBadge").textContent = S.prenotazioni.size; $("resBadge").hidden = !S.prenotazioni.size;
   renderKpis(nRes); renderMag(); renderRes(); renderLog(); renderLists();
   if ($("dlgRes").open) { resPickers().forEach(p => p.render()); renderCart(); }
-  if ($("dlgAdd").open) { P.aLine.render(); P.aKnown.render(); $("aKnownGrp").hidden = !(P.aLine.value && sizesOf(P.aLine.value).length); }
+  if ($("dlgAdd").open) { P.aLine.render(); renderKnown(); }
   renderDetail();
+}
+
+/* ---------- catalogo misure per marca ---------- */
+const sizeKey = (d, l) => `${Number(d)}x${Number(l)}`;
+function catOf(lineId) {
+  const c = S.linee.get(lineId)?.catalogo || {};
+  return { diametri: (c.diametri || []).map(Number), lunghezze: (c.lunghezze || []).map(Number), misure: new Set(c.misure || []) };
+}
+// misure da mostrare in valigia: quelle caricate più quelle del catalogo ancora mai caricate
+function viewSizes(lineId) {
+  const out = sizesOf(lineId).map(([sid, s]) => [sid, s, false]);
+  const have = new Set(out.map(([, s]) => sizeKey(s.d, s.l)));
+  for (const k of catOf(lineId).misure) {
+    if (have.has(k)) continue;
+    const [d, l] = k.split("x").map(Number);
+    out.push([stockKey(lineId, d, l), { lineId, d, l, qty: 0 }, true]);
+  }
+  return out.sort(([, a], [, b]) => a.d - b.d || a.l - b.l);
+}
+function gridHTML(ds, ls, cell, cls = "") {
+  if (!ds.length || !ls.length) return `<p class="fieldnote">Aggiungi almeno un diametro e una lunghezza.</p>`;
+  return `<table class="cg ${cls}"><thead><tr><th class="rh">Ø / L</th>${ls.map(l => `<th>${mm(l)}</th>`).join("")}</tr></thead><tbody>` +
+    ds.map(d => `<tr><th class="rh">${mm(d)}</th>${ls.map(l => `<td>${cell(d, l)}</td>`).join("")}</tr>`).join("") + `</tbody></table>`;
+}
+const parseList = v => String(v).split(/[\s;]+/).map(x => parseMm(x)).filter(n => n > 0);
+
+const cat = { lineId: null, d: [], l: [], on: new Set() };
+function openCatalog(lineId) {
+  const c = catOf(lineId);
+  cat.lineId = lineId; cat.d = [...c.diametri]; cat.l = [...c.lunghezze]; cat.on = new Set(c.misure);
+  if (!cat.d.length && !cat.l.length) { // prima volta: parte dalle misure già in valigia
+    for (const [, s] of sizesOf(lineId)) { if (!cat.d.includes(s.d)) cat.d.push(s.d); if (!cat.l.includes(s.l)) cat.l.push(s.l); cat.on.add(sizeKey(s.d, s.l)); }
+  }
+  $("catTitle").textContent = lineName(lineId); $("catErr").hidden = true; $("catDIn").value = ""; $("catLIn").value = "";
+  renderCatalog(); $("dlgCat").showModal();
+}
+function renderCatalog() {
+  cat.d.sort((a, b) => a - b); cat.l.sort((a, b) => a - b);
+  const chips = (arr, kind) => arr.map(v => `<span class="chipx">${mm(v)}<button type="button" data-catrm="${kind}:${v}" aria-label="Togli ${mm(v)}">✕</button></span>`).join("") || `<span class="fieldnote">Nessuno</span>`;
+  $("catD").innerHTML = chips(cat.d, "d"); $("catL").innerHTML = chips(cat.l, "l");
+  $("catGrid").innerHTML = gridHTML(cat.d, cat.l, (d, l) => { const on = cat.on.has(sizeKey(d, l)); return `<button type="button" data-catcell="${sizeKey(d, l)}" aria-pressed="${on}" aria-label="Ø ${mm(d)} × ${mm(l)}">${on ? "✓" : ""}</button>`; });
+  const n = cat.d.reduce((a, d) => a + cat.l.filter(l => cat.on.has(sizeKey(d, l))).length, 0);
+  $("catCount").textContent = `${n} ${n === 1 ? "misura esistente" : "misure esistenti"} su ${cat.d.length * cat.l.length} combinazioni.`;
+}
+function catAdd(kind) {
+  const inp = $(kind === "d" ? "catDIn" : "catLIn"), vals = parseList(inp.value);
+  if (!vals.length) return;
+  const arr = kind === "d" ? cat.d : cat.l, other = kind === "d" ? cat.l : cat.d;
+  for (const v of vals) if (!arr.includes(v)) { arr.push(v); for (const o of other) cat.on.add(kind === "d" ? sizeKey(v, o) : sizeKey(o, v)); }
+  inp.value = ""; renderCatalog();
+}
+async function saveCatalog() {
+  const misure = [];
+  for (const d of cat.d) for (const l of cat.l) if (cat.on.has(sizeKey(d, l))) misure.push(sizeKey(d, l));
+  try {
+    await DB.update("linee", cat.lineId, { catalogo: { diametri: cat.d, lunghezze: cat.l, misure } });
+    $("dlgCat").close(); toast(`Misure di ${lineName(cat.lineId)} salvate`);
+  } catch (e) { $("catErr").textContent = dbErr(e); $("catErr").hidden = false; }
+}
+
+// scelta misura nel Carica
+const addSel = { key: null };
+function renderAddCatalog() {
+  const lineId = P.aLine.value, c = lineId ? catOf(lineId) : null, has = !!(c && c.misure.size);
+  $("aCatGrp").hidden = !has; $("aCatEmpty").hidden = !lineId || has || !(canWrite && db);
+  if (!has) { $("aManual").hidden = false; return; }
+  $("aCat").innerHTML = gridHTML(c.diametri, c.lunghezze, (d, l) => {
+    const k = sizeKey(d, l); if (!c.misure.has(k)) return `<span class="void" title="Misura non prodotta"></span>`;
+    const q = S.stock.get(stockKey(lineId, d, l))?.qty || 0;
+    return `<button type="button" data-addcell="${k}" aria-pressed="${addSel.key === k}" aria-label="Ø ${mm(d)} × ${mm(l)}, ${q} in valigia">${q}</button>`;
+  }, "pick");
 }
 
 const needsOrder = sid => { const s = S.stock.get(sid); return !!s && S.linee.has(s.lineId) && (!availFor(sid) || !!s.riordino); };
@@ -694,8 +808,15 @@ function renderOrder() {
       (w ? `<div class="acts wrapit"><button class="btn primary" type="button" data-ord="arrived">Arrivato: +${s.riordinoQty || 1} in valigia</button><button class="btn" type="button" data-ord="clear">Togli dalla lista</button></div>` : "");
   }
 }
-async function orderAction(act, sid) {
-  const id = sid || openStock, s = S.stock.get(id); if (!s) return;
+async function orderAction(act, sid, vsize) {
+  const id = sid || openStock;
+  if (!S.stock.get(id) && vsize && act === "quick") {
+    const [lineId, d, l] = vsize.split(":");
+    try { await DB.set("stock", id, { lineId, d: Number(d), l: Number(l), qty: 0, riordino: "da_ordinare", riordinoQty: 1, riordinoAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); toast("Aggiunto alla lista d'ordine"); }
+    catch (e) { toast(dbErr(e)); }
+    return;
+  }
+  const s = S.stock.get(id); if (!s) return;
   const now = new Date().toISOString(), n = s.riordinoQty || 1;
   const patch = {
     mark: { riordino: "da_ordinare", riordinoQty: form.ordQty, riordinoAt: now },
@@ -738,18 +859,20 @@ function renderMag() {
   let html = ui.line === "ZERO" ? orderListHTML() : "";
   for (const l of lines) {
     if (ui.line !== "ALL" && ui.line !== "ZERO" && ui.line !== l.id) continue;
-    const sizes = sizesOf(l.id);
+    const sizes = viewSizes(l.id);
     if (ui.line === "ZERO" && !sizes.length) continue;
     const av = sizes.reduce((a, [sid]) => a + availFor(sid), 0);
-    html += `<article class="lcard"><div class="lhead"><h2>${esc(l.label)}</h2><span><b>${av}</b> disponibili</span></div>`;
+    html += `<article class="lcard"><div class="lhead"><h2>${esc(l.label)}</h2><span><b>${av}</b> disponibili${canWrite && db ? `<button type="button" class="catlink" data-cat="${esc(l.id)}">Misure</button>` : ""}</span></div>`;
     if (!sizes.length) html += `<div class="lempty">Nessuna misura caricata.</div>`;
     for (const d of [...new Set(sizes.map(([, s]) => s.d))]) {
       html += `<div class="dgroup"><div class="dlabel">Diametro ${mm(d)} mm</div>`;
-      for (const [sid, s] of sizes.filter(([, s]) => s.d === d)) {
+      for (const [sid, s, virtual] of sizes.filter(([, s]) => s.d === d)) {
         const a = availFor(sid), r = reservedFor(sid);
-        const row = `<button type="button" class="srow" data-open="${esc(sid)}"><span class="size">Ø ${mm(s.d)} × ${mm(s.l)}<small>mm</small></span><span class="stags">${r ? `<span class="rtag">${r} pren.</span>` : ""}${orderTag(s)}</span><span class="pill ${status(a)}">${a ? `<b>${a}</b> disp.` : (s.qty || 0) > 0 ? "tutti prenotati" : "esaurito"}</span></button>`;
+        const row = virtual
+          ? `<button type="button" class="srow missing" data-addsize="${esc(l.id)}:${s.d}:${s.l}"><span class="size">Ø ${mm(s.d)} × ${mm(s.l)}<small>mm</small></span><span class="stags"></span><span class="pill none">non in valigia</span></button>`
+          : `<button type="button" class="srow" data-open="${esc(sid)}"><span class="size">Ø ${mm(s.d)} × ${mm(s.l)}<small>mm</small></span><span class="stags">${r ? `<span class="rtag">${r} pren.</span>` : ""}${orderTag(s)}</span><span class="pill ${status(a)}">${a ? `<b>${a}</b> disp.` : (s.qty || 0) > 0 ? "tutti prenotati" : "esaurito"}</span></button>`;
         html += ui.line === "ZERO" && canWrite && db
-          ? `<div class="srow-wrap">${row}<button type="button" class="qbtn" data-ord="quick" data-sid="${esc(sid)}" aria-pressed="${!!s.riordino}">${s.riordino ? "✓ In lista" : "Ordina"}</button></div>`
+          ? `<div class="srow-wrap">${row}<button type="button" class="qbtn" data-ord="quick" data-sid="${esc(sid)}" data-vsize="${virtual ? `${esc(l.id)}:${s.d}:${s.l}` : ""}" aria-pressed="${!!s.riordino}">${s.riordino ? "✓ In lista" : "Ordina"}</button></div>`
           : row;
       }
       html += `</div>`;
@@ -843,12 +966,12 @@ function renderLists() {
     if (!items.length) h += `<p class="hint" style="padding:6px 0">Elenco vuoto.</p>`;
     for (const [id, v] of items) {
       const key = kind + ":" + id;
-      const sub = kind === "linee" ? `${plural(sizesOf(id).length, "misura", "misure")} · ${sizesOf(id).reduce((a, [sid]) => a + availFor(sid), 0)} disponibili`
+      const sub = kind === "linee" ? `${catOf(id).misure.size ? `${plural(catOf(id).misure.size, "misura", "misure")} a catalogo · ` : "misure non impostate · "}${sizesOf(id).reduce((a, [sid]) => a + availFor(sid), 0)} disponibili`
         : plural([...S.prenotazioni.values()].filter(r => r.dottoreId === id).length, "prenotazione aperta", "prenotazioni aperte");
       if (ui.renaming === key) {
         h += `<div class="litem"><input class="inp" id="ren-input" value="${esc(v.name)}" data-ren-input="${esc(key)}"><div class="acts"><button class="btn sm primary" type="button" data-ren-save="${esc(key)}">Salva</button><button class="btn sm" type="button" data-ren-cancel>✕</button></div></div>`;
       } else {
-        h += `<div class="litem"><div class="nm">${esc(v.name)}<small>${sub}</small></div>${canWrite && db ? `<div class="acts"><button class="btn sm" type="button" data-ren="${esc(key)}">Rinomina</button><button class="btn sm danger" type="button" data-del="${esc(key)}">Elimina</button></div>` : ""}</div>`;
+        h += `<div class="litem"><div class="nm">${esc(v.name)}<small>${sub}</small></div>${canWrite && db ? `<div class="acts">${kind === "linee" ? `<button class="btn sm" type="button" data-cat="${esc(id)}">Misure</button>` : ""}<button class="btn sm" type="button" data-ren="${esc(key)}">Rinomina</button><button class="btn sm danger" type="button" data-del="${esc(key)}">Elimina</button></div>` : ""}</div>`;
         if (ui.deleting === key) h += `<div class="confirmbox"><p><b>Eliminare “${esc(v.name)}”?</b> ${deleteSummary(kind, id)}</p><div class="acts"><button class="btn danger" type="button" data-del-go="${esc(key)}">Elimina tutto</button><button class="btn" type="button" data-del-cancel>Annulla</button></div></div>`;
       }
     }
@@ -1050,11 +1173,14 @@ function openReserve(opts = {}) {
   $("dlgRes").showModal();
   if (!form.patient) { setTimeout(() => $("adLast").focus(), 50); alfadocs("ping").catch(() => {}); }
 }
-function openAdd() {
+function openAdd(preset = {}) {
   $("fAdd").reset(); $("aErr").hidden = true; $("aQty").value = 1;
-  P.aLine.reset();
-  const last = read("line"); if (last && S.linee.has(last)) P.aLine.value = last;
-  else if (ui.line !== "ALL") P.aLine.value = ui.line;
+  P.aLine.reset(); addSel.key = null;
+  const last = read("line");
+  if (preset.lineId && S.linee.has(preset.lineId)) P.aLine.value = preset.lineId;
+  else if (last && S.linee.has(last)) P.aLine.value = last;
+  else if (ui.line !== "ALL" && ui.line !== "ZERO") P.aLine.value = ui.line;
+  if (preset.d) { $("aDia").value = mm(preset.d); $("aLen").value = mm(preset.l); addSel.key = sizeKey(preset.d, preset.l); }
   P.aLine.render(); renderKnown();
   $("dlgAdd").showModal();
 }
@@ -1151,10 +1277,12 @@ document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e =
 $("dlgSize").addEventListener("close", () => { openStock = null; });
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-ord],[data-dellog],[data-open],[data-step],[data-used],[data-allused],[data-rmitem],[data-cancel],[data-edit],[data-undo],[data-cart],[data-line],[data-sede],[data-ren],[data-ren-save],[data-ren-cancel],[data-del],[data-del-go],[data-del-cancel],[data-delacc]");
+  const t = e.target.closest("[data-cat],[data-addsize],[data-ord],[data-dellog],[data-open],[data-step],[data-used],[data-allused],[data-rmitem],[data-cancel],[data-edit],[data-undo],[data-cart],[data-line],[data-sede],[data-ren],[data-ren-save],[data-ren-cancel],[data-del],[data-del-go],[data-del-cancel],[data-delacc]");
   if (!t || t.disabled) return;
   const d = t.dataset;
-  if (d.ord) { if (d.ord === "qplus") { form.ordQty++; renderOrder(); } else if (d.ord === "qminus") { form.ordQty = Math.max(1, form.ordQty - 1); renderOrder(); } else orderAction(d.ord, d.sid); return; }
+  if (d.cat) { openCatalog(d.cat); return; }
+  if (d.addsize) { const [lineId, dd, ll] = d.addsize.split(":"); openAdd({ lineId, d: Number(dd), l: Number(ll) }); return; }
+  if (d.ord) { if (d.ord === "qplus") { form.ordQty++; renderOrder(); } else if (d.ord === "qminus") { form.ordQty = Math.max(1, form.ordQty - 1); renderOrder(); } else orderAction(d.ord, d.sid, d.vsize); return; }
   if (d.open) { form.ordQty = 1; openStock = d.open; $("szErr").hidden = true; $("dlgSize").showModal(); renderDetail(); return; }
   if (d.step) return step(Number(d.step));
   if (d.used) { if (armed(t)) markUsed(d.used, Number(d.i)); return; }
@@ -1220,6 +1348,24 @@ $("fRes").addEventListener("submit", async e => {
   } catch (ex) { fail(dbErr(ex)); }
 });
 
+$("catDAdd").addEventListener("click", () => catAdd("d"));
+$("catLAdd").addEventListener("click", () => catAdd("l"));
+$("catDIn").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); catAdd("d"); } });
+$("catLIn").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); catAdd("l"); } });
+$("catAll").addEventListener("click", () => { for (const d of cat.d) for (const l of cat.l) cat.on.add(sizeKey(d, l)); renderCatalog(); });
+$("catNone").addEventListener("click", () => { cat.on.clear(); renderCatalog(); });
+$("catSave").addEventListener("click", saveCatalog);
+$("dlgCat").addEventListener("click", e => {
+  const c = e.target.closest("[data-catcell]"); if (c) { const k = c.dataset.catcell; cat.on.has(k) ? cat.on.delete(k) : cat.on.add(k); renderCatalog(); return; }
+  const r = e.target.closest("[data-catrm]"); if (r) { const [kind, v] = r.dataset.catrm.split(":"); const n = Number(v);
+    if (kind === "d") { cat.d = cat.d.filter(x => x !== n); for (const l of cat.l) cat.on.delete(sizeKey(n, l)); }
+    else { cat.l = cat.l.filter(x => x !== n); for (const d of cat.d) cat.on.delete(sizeKey(d, n)); }
+    renderCatalog(); }
+});
+$("dlgCat").addEventListener("close", () => { if ($("dlgAdd").open) renderKnown(); });
+$("aCat").addEventListener("click", e => { const b = e.target.closest("[data-addcell]"); if (!b) return; addSel.key = b.dataset.addcell; const [d, l] = addSel.key.split("x").map(Number); $("aDia").value = mm(d); $("aLen").value = mm(l); renderKnown(); });
+$("aManualShow").addEventListener("click", () => { addSel.manual = true; addSel.key = null; $("aDia").value = ""; $("aLen").value = ""; renderKnown(); $("aDia").focus(); });
+$("aCatSet").addEventListener("click", () => { if (P.aLine.value) openCatalog(P.aLine.value); });
 $("aMinus").addEventListener("click", () => { $("aQty").value = Math.max(1, (parseInt($("aQty").value, 10) || 1) - 1); });
 $("aPlus").addEventListener("click", () => { $("aQty").value = (parseInt($("aQty").value, 10) || 0) + 1; });
 $("fAdd").addEventListener("submit", async e => {
@@ -1227,6 +1373,7 @@ $("fAdd").addEventListener("submit", async e => {
   const err = $("aErr"); err.hidden = true;
   const fail = m => { err.textContent = m; err.hidden = false; };
   const lineId = P.aLine.value, d = parseMm($("aDia").value), l = parseMm($("aLen").value), n = parseInt($("aQty").value, 10);
+  if (lineId && !$("aCatGrp").hidden && !addSel.manual && !addSel.key) return fail("Tocca la misura nella griglia.");
   if (!lineId) return fail("Scegli la marca, oppure creala con “+ Nuova marca”.");
   if (!(d >= 1 && d <= 12)) return fail("Scrivi un diametro tra 1 e 12 mm, per esempio 4,1.");
   if (!(l >= 2 && l <= 80)) return fail("Scrivi una lunghezza tra 2 e 80 mm, per esempio 10.");
@@ -1237,7 +1384,13 @@ $("fAdd").addEventListener("submit", async e => {
     else await DB.set("stock", id, { lineId, d, l, qty: n, updatedAt: new Date().toISOString() });
     save("line", lineId);
     toast(`+${n} ${lineName(lineId)} Ø ${mm(d)} × ${mm(l)}`);
-    $("aDia").value = ""; $("aLen").value = ""; $("aQty").value = 1; P.aKnown.value = null;
+    const c = catOf(lineId);
+    if (c.misure.size && !c.misure.has(sizeKey(d, l))) { // misura scritta a mano: entra nel catalogo
+      const ds = c.diametri.includes(d) ? c.diametri : [...c.diametri, d].sort((a, b) => a - b);
+      const ls = c.lunghezze.includes(l) ? c.lunghezze : [...c.lunghezze, l].sort((a, b) => a - b);
+      await DB.update("linee", lineId, { catalogo: { diametri: ds, lunghezze: ls, misure: [...c.misure, sizeKey(d, l)] } });
+    }
+    $("aDia").value = ""; $("aLen").value = ""; $("aQty").value = 1; addSel.key = null; addSel.manual = false; renderKnown();
   } catch (ex) { fail(dbErr(ex)); }
 });
 
@@ -1304,15 +1457,35 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) resy
 window.addEventListener("online", resync);
 setInterval(() => { if (!document.hidden) resync(); }, 60000);
 
+/* ---------- aggiornamenti: l'app dalla Home può tenere una versione vecchia ---------- */
+const BUILD = "2026-10-05a";
+async function checkVersion() {
+  try {
+    const v = (await (await fetch("version.txt?t=" + Date.now(), { cache: "no-store" })).text()).trim();
+    if (v && v !== BUILD && !sessionStorage.getItem("reloaded-" + v)) { sessionStorage.setItem("reloaded-" + v, "1"); location.reload(); }
+  } catch (e) {}
+}
+checkVersion();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkVersion(); });
+
 /* ---------- accesso ---------- */
+// Memoria per la sessione: se il telefono blocca localStorage, resta in memoria per questa apertura
+const memStore = {};
+const safeStorage = {
+  getItem: k => { try { return localStorage.getItem(k); } catch (e) { return memStore[k] ?? null; } },
+  setItem: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { memStore[k] = v; } },
+  removeItem: k => { try { localStorage.removeItem(k); } catch (e) { delete memStore[k]; } },
+};
+const withTimeout = (promise, ms, what) => Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout:" + what)), ms))]);
 function show(view) { for (const v of ["setupView", "authView", "deniedView", "appView"]) $(v).hidden = v !== view; }
 function authFail(m) { const e = $("authErr"); e.textContent = m; e.hidden = !m; }
 
 async function enter(session) {
   if (!session) { db = null; show("authView"); return; }
   userEmail = session.user.email || "";
-  const { data: ok, error } = await sb.rpc("is_allowed");
-  if (error) { show("authView"); authFail("Non riesco a verificare l'accesso. Controlla la connessione e riprova."); return; }
+  let ok = false, error = null;
+  try { ({ data: ok, error } = await withTimeout(sb.rpc("is_allowed"), 12000, "verifica")); } catch (e) { error = e; }
+  if (error) { show("authView"); authFail("Non riesco a verificare l'accesso (" + (error.message || error) + "). Controlla la connessione e riprova."); return; }
   if (!ok) { $("deniedEmail").textContent = userEmail; show("deniedView"); return; }
   db = sb; canWrite = true;
   $("meEmail").textContent = userEmail;
@@ -1338,16 +1511,18 @@ $("fAuth").addEventListener("submit", async e => {
   const btn = $("authSubmit"); btn.disabled = true;
   try {
     if (signUpMode) {
-      const { data, error } = await sb.auth.signUp({ email, password });
+      const { data, error } = await withTimeout(sb.auth.signUp({ email, password }), 15000, "registrazione");
       if (error) return authFail(/registered|exists/i.test(error.message) ? "Questa email ha già un account: torna su “Entra”." : "Registrazione non riuscita: " + error.message);
       if (!data.session) return authFail("Account creato, ma Supabase chiede la conferma via email. Chi gestisce l'app deve disattivare “Confirm email”.");
       await enter(data.session);
     } else {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      const { data, error } = await withTimeout(sb.auth.signInWithPassword({ email, password }), 15000, "accesso");
       if (error) return authFail(/invalid/i.test(error.message) ? "Email o password non corrette. Se è il tuo primo accesso, tocca “Primo accesso”." : "Accesso non riuscito: " + error.message);
       await enter(data.session);
     }
-  } catch (ex) { authFail("Connessione assente. Riprova quando c'è rete."); }
+  } catch (ex) {
+    authFail(/timeout/.test(String(ex && ex.message)) ? "Il server non ha risposto in tempo. Controlla la connessione e riprova." : "Accesso non riuscito: " + (ex && ex.message || ex) + ". Riprova.");
+  }
   finally { btn.disabled = false; }
 });
 $("deniedRetry").addEventListener("click", async () => { const { data } = await sb.auth.getSession(); enter(data.session); });
@@ -1358,9 +1533,16 @@ $("logout").addEventListener("click", logout);
 (function boot() {
   const cfg = window.VALIGIA_CONFIG || {};
   if (!window.supabase || !cfg.supabaseUrl || !cfg.supabaseAnonKey || /INSERISCI/.test(cfg.supabaseUrl + cfg.supabaseAnonKey)) { show("setupView"); return; }
-  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+    auth: {
+      persistSession: true, autoRefreshToken: true, detectSessionInUrl: false,
+      storage: safeStorage, storageKey: "valigia-auth",
+      // Nell'app aperta dalla Home dell'iPhone il "lock" del browser può restare bloccato: lo evitiamo
+      lock: async (_name, _timeout, fn) => await fn(),
+    },
+  });
   sb.auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT") { db = null; show("authView"); } });
-  sb.auth.getSession().then(({ data }) => enter(data.session)).catch(() => show("authView"));
+  withTimeout(sb.auth.getSession(), 8000, "sessione").then(({ data }) => enter(data.session)).catch(() => show("authView"));
 })();
 </script>
 </body>

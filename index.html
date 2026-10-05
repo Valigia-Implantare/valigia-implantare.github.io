@@ -1458,7 +1458,7 @@ window.addEventListener("online", resync);
 setInterval(() => { if (!document.hidden) resync(); }, 60000);
 
 /* ---------- aggiornamenti: l'app dalla Home può tenere una versione vecchia ---------- */
-const BUILD = "2026-10-05a";
+const BUILD = "2026-10-05b";
 async function checkVersion() {
   try {
     const v = (await (await fetch("version.txt?t=" + Date.now(), { cache: "no-store" })).text()).trim();
@@ -1536,7 +1536,7 @@ $("logout").addEventListener("click", logout);
   sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
     auth: {
       persistSession: true, autoRefreshToken: true, detectSessionInUrl: false,
-      storage: safeStorage, storageKey: "valigia-auth",
+      storage: safeStorage,
       // Nell'app aperta dalla Home dell'iPhone il "lock" del browser può restare bloccato: lo evitiamo
       lock: async (_name, _timeout, fn) => await fn(),
     },

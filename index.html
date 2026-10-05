@@ -499,6 +499,17 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
   </form>
 </dialog>
 
+<!-- Lista ordini -->
+<dialog id="dlgOrd">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><div class="kicker">Riordino</div><h2>Lista ordini</h2></div>
+      <button class="close" type="button" data-close aria-label="Chiudi">✕</button>
+    </div>
+    <div id="ordBody"></div>
+  </div>
+</dialog>
+
 <!-- Catalogo misure della marca -->
 <dialog id="dlgCat">
   <div class="sheet">
@@ -708,6 +719,7 @@ function render() {
   if ($("dlgRes").open) { resPickers().forEach(p => p.render()); renderCart(); }
   if ($("dlgAdd").open) { P.aLine.render(); renderKnown(); }
   renderDetail();
+  if ($("dlgOrd").open) $("ordBody").innerHTML = orderListHTML();
 }
 
 /* ---------- catalogo misure per marca ---------- */
@@ -802,7 +814,7 @@ function orderListHTML() {
     </div>`).join("");
   };
   const a = block("da_ordinare", "Da ordinare"), b = block("ordinato", "Ordinati, in arrivo");
-  return `<div class="ordcard"><h2>Lista d'ordine</h2>${a || b ? a + b : `<p class="hint">Nessuna misura da ordinare. Per aggiungerne una, nella Valigia tocca la misura e premi “Segna da ordinare”, oppure usa “Carica” e scegli “Segna da ordinare”.</p>`}</div>`;
+  return `<div class="ordcard" style="box-shadow:none;padding:0">${a || b ? a + b : `<p class="hint">Nessuna misura da ordinare. Per aggiungerne una, nella Valigia tocca la misura e premi “Segna da ordinare”, oppure usa “Carica” e scegli “Segna da ordinare”.</p>`}</div>`;
 }
 function renderOrder() {
   const s = S.stock.get(openStock), box = $("szOrder"); if (!s) return;
@@ -852,7 +864,7 @@ function renderKpis(nRes) {
   $("kpis").innerHTML =
     `<div class="kpi ok"><b>${av}</b><span>Disponibili</span></div>` +
     `<div class="kpi res"><b>${nRes}</b><span>Prenotati</span></div>` +
-    `<button type="button" class="kpi bad" data-line="ZERO" aria-label="Apri il riordino"><b>${out}</b><span>Riordino ›</span></button>`;
+    `<button type="button" class="kpi bad" data-ordlist="1" aria-label="Apri la lista ordini"><b>${out}</b><span>${out === 1 ? "Misura da ordinare ›" : "Lista ordini ›"}</span></button>`;
 }
 
 function renderMag() {
@@ -860,14 +872,12 @@ function renderMag() {
   if (!db) { box.innerHTML = ""; fl.innerHTML = ""; return; }
   if (!allLoaded()) { box.innerHTML = `<div class="empty"><p>Caricamento…</p></div>`; return; }
   const lines = lineItems(false);
-  if (ui.line !== "ALL" && ui.line !== "ZERO" && !S.linee.has(ui.line)) ui.line = "ALL";
-  const nZero = [...S.stock.keys()].filter(needsOrder).length;
-  fl.innerHTML = lines.length ? [{ id: "ALL", label: "Tutte" }, { id: "ZERO", label: nZero ? `Riordino (${nZero})` : "Riordino" }, ...lines].map(l => `<button type="button" class="fchip" data-line="${esc(l.id)}" aria-pressed="${ui.line === l.id}">${esc(l.label)}</button>`).join("") : "";
+  if (ui.line !== "ALL" && !S.linee.has(ui.line)) ui.line = "ALL";
+  fl.innerHTML = lines.length ? [{ id: "ALL", label: "Tutte" }, ...lines].map(l => `<button type="button" class="fchip" data-line="${esc(l.id)}" aria-pressed="${ui.line === l.id}">${esc(l.label)}</button>`).join("") : "";
   if (!lines.length) {
     box.innerHTML = `<div class="empty"><h2>La valigia è vuota</h2><p>Tocca <b>Carica</b> in alto: scegli o crea la marca (per esempio “Straumann BLT”), scrivi diametro, lunghezza e quantità. Marche e dottori si gestiscono anche dalla scheda <b>Elenchi</b>.</p></div>`;
     return;
   }
-  if (ui.line === "ZERO") { box.innerHTML = orderListHTML(); return; }
   let html = "";
   for (const l of lines) {
     if (ui.line !== "ALL" && ui.line !== "ZERO" && ui.line !== l.id) continue;
@@ -1289,9 +1299,10 @@ document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e =
 $("dlgSize").addEventListener("close", () => { openStock = null; });
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-cat],[data-addsize],[data-ord],[data-dellog],[data-open],[data-step],[data-used],[data-allused],[data-rmitem],[data-cancel],[data-edit],[data-undo],[data-cart],[data-line],[data-sede],[data-ren],[data-ren-save],[data-ren-cancel],[data-del],[data-del-go],[data-del-cancel],[data-delacc]");
+  const t = e.target.closest("[data-ordlist],[data-cat],[data-addsize],[data-ord],[data-dellog],[data-open],[data-step],[data-used],[data-allused],[data-rmitem],[data-cancel],[data-edit],[data-undo],[data-cart],[data-line],[data-sede],[data-ren],[data-ren-save],[data-ren-cancel],[data-del],[data-del-go],[data-del-cancel],[data-delacc]");
   if (!t || t.disabled) return;
   const d = t.dataset;
+  if (d.ordlist) { $("ordBody").innerHTML = orderListHTML(); $("dlgOrd").showModal(); return; }
   if (d.cat) { openCatalog(d.cat); return; }
   if (d.addsize) { const [lineId, dd, ll] = d.addsize.split(":"); openAdd({ lineId, d: Number(dd), l: Number(ll) }); return; }
   if (d.ord) { if (d.ord === "qplus") { form.ordQty++; renderOrder(); } else if (d.ord === "qminus") { form.ordQty = Math.max(1, form.ordQty - 1); renderOrder(); } else orderAction(d.ord, d.sid, d.vsize); return; }
@@ -1484,7 +1495,7 @@ window.addEventListener("online", resync);
 setInterval(() => { if (!document.hidden) resync(); }, 60000);
 
 /* ---------- aggiornamenti: l'app dalla Home può tenere una versione vecchia ---------- */
-const BUILD = "2026-10-05c";
+const BUILD = "2026-10-06a";
 async function checkVersion() {
   try {
     const v = (await (await fetch("version.txt?t=" + Date.now(), { cache: "no-store" })).text()).trim();
